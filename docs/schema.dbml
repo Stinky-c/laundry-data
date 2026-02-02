@@ -1,0 +1,119 @@
+Project LaundryData {
+  Note: '''
+    requires Postgres >=18, and timescale latest version
+
+    docker setup:
+      https://www.tigerdata.com/docs/self-hosted/latest/install/installation-docker
+
+    Fast joins using CTE:
+      https://www.tigerdata.com/docs/tutorials/latest/cookbook#get-faster-join-queries-with-common-table-expressions
+
+    csc api docs:
+      https://web.archive.org/web/20240120071238/https://mycscgo.com/api/v1/docs/static/index.html#/Events/EventsController_events
+      OT Location id: ***REMOVED***
+        Res hall: ***REMOVED***
+        Village red: ***REMOVED***
+        Village blue: ***REMOVED***
+        Village yellow: ***REMOVED***
+
+      opaqueId is global machine id
+  
+    TODO:
+      - Materialzed view? based on locations. A temp table for every location.
+      - A machine history. Another table with machine id and room id in case a machine moves accorss rooms or locations
+      - Primary key describes a little bit of the row. timestamp + hash(important value)
+
+    Wishes:
+      - backfilling
+  '''
+}
+
+Table Laundry {
+  id uuid [pk, note:'UUID v7 has the timestamp for timescale', default: `uuidv7()`]
+  global_machine_id int [ref: < Machines.id]
+  current_state MachineState
+
+  // csc fields
+  door_closed bool
+  available bool
+  not_available_reason string [note: 'TODO: find all reasons it may not be available']
+  time_remaining smallint [note: 'How long the machine will run for']
+
+  machine_settings json [note: 'Json because it is simple to handle and pg supports queries inside.']
+
+  note: '''
+    Every row repersents the state of a machine at a point in time.
+    Will grow quickly if collectiong more than oregontech machines.
+
+    Does not include a timestamp column, extract timestamp from uuid if needed.
+      https://www.tigerdata.com/docs/api/latest/uuid-functions
+
+    Discussion 1/29:
+      Primary keys should have data related to the row. UUID is a random value with no relation to data.
+      This is the "log" table, it has every part of the response for the api.
+
+    Extra:
+    create as a hypertable
+      https://www.tigerdata.com/docs/use-timescale/latest/hypertables/hypertable-crud
+
+      WITH (
+        tsdb.hypertable,
+        tsdb.orderby='time',
+        tsdb.partition_column = 'id'
+      )
+  '''
+}
+
+Table Machines {
+  id int [pk, note:'Global machine id']
+  room_id int [ref: > Rooms.id]
+  type MachineType
+
+  csc_machine_id uuid
+  // csc fields
+  opaque_id uuid
+
+  note:'''
+    A machine may be replaced. 
+    TODO: need mechanism to keep track of a spot at a location. Stickernumber vs Machine id
+  '''
+}
+
+Table Rooms {
+  id int [pk]
+  csc_id int
+  location_id int [ref: > Locations.id]
+}
+
+Table Locations {
+  id int [pk, note: "Global location id"]
+  csc_id int
+  address string
+  timezone string [note:'The timezone a location is in']
+}
+
+enum MachineState {
+  pressStart
+  running
+  idle
+  unknown
+}
+
+enum MachineType {
+  washer
+  dryer
+}
+
+Table ApiLog {
+  id int [pk, not null]
+  timestamp timestamptz [not null]
+  status ApiStatus [not null, default: ApiStauts.unknown, note: 'api status for timestamp. Need to fill in ApiStatus better']
+  message string [not null, note: 'Will contain an error message']
+}
+// TODO: Fill in
+enum ApiStatus {
+  up
+  down
+  failure
+  unknown
+}

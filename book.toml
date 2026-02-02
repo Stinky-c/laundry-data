@@ -1,0 +1,8 @@
+[book]
+title = "Laundry Data"
+authors = ["Buckydev"]
+language = "en"
+src = "docs/"
+
+[build]
+extra-watch-dirs = ["out/"]
