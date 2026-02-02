@@ -4,4 +4,4 @@
 - [Index]()
 - [Considerations]()
 - [CSC Information]()
-- [Schema]()
+- [Schema](Schema.md)

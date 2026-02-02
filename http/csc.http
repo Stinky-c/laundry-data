@@ -1,0 +1,52 @@
+### Get location
+GET {{host}}/api/v1/location/{{location_id}}
+Accept-Language: en-US
+User-Agent: {{user_agent}}
+accept: application/json
+
+>>! res/location/{{location_id}}.json
+
+
+### Get room summary
+GET {{host}}/api/v1/location/{{location_id}}/room/{{room_id}}/summary
+Accept-Language: en-US
+User-Agent: {{user_agent}}
+accept: application/json
+
+>>! res/summary/{{location_id}}/{{room_id}}.json
+
+
+### Get all room machine
+GET {{host}}/api/v1/location/{{location_id}}/room/{{room_id}}/machines
+Accept-Language: en-US
+User-Agent: {{user_agent}}
+accept: application/json
+
+>>! res/machines/{{location_id}}/{{room_id}}.json
+
+
+### Location search by lon, lat
+GET {{host}}/api/v1/location/search?
+    latitude={{latitude}}&
+    longitude={{longitude}}&
+    radius=5&
+    limit=10
+Accept-Language: en-US
+User-Agent: {{user_agent}}
+accept: application/json
+
+>>! res/search/{{$random.uuid}}.json
+
+###
+# curl --request GET
+#  --url 'https://mycscgo.com/api/v1/machine/number/1?locationId=***REMOVED***&roomId=***REMOVED***'
+#  --header 'Accept-Language: en-US'
+#  --header 'User-Agent: CSCGo/1.0.0/2020100101 (iOS; 14.0; iPhone 12 Pro Max)'
+#  --header 'accept: application/json'
+GET https://mycscgo.com/api/v1/machine/number/1?locationId=***REMOVED***&
+    roomId=***REMOVED***
+Accept-Language: en-US
+User-Agent: {{user_agent}}
+accept: application/json
+
+###

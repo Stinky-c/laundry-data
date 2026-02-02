@@ -7,3 +7,7 @@ dbml-error.log
 
 # mdbook
 book/
+
+# API responses
+http/res/
+http-client.private.env.json

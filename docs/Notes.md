@@ -53,6 +53,3 @@ Features that are out of scope and can be finished in my free time
 
   - Notified when something is beginning to fail 
 
-## Schema
-
-![Database schema](out/schema.svg)
