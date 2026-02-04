@@ -2,7 +2,6 @@
 /target
 
 # DBML and extra
-docs/out/
 dbml-error.log
 
 # mdbook

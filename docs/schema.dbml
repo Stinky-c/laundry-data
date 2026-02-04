@@ -1,4 +1,5 @@
 Project LaundryData {
+  database_type: 'PostgreSQL'
   Note: '''
     requires Postgres >=18, and timescale latest version
 
@@ -19,7 +20,7 @@ Project LaundryData {
       opaqueId is global machine id
   
     TODO:
-      - Materialzed view? based on locations. A temp table for every location.
+      - Materialized view? based on locations. A temp table for every location.
       - A machine history. Another table with machine id and room id in case a machine moves accorss rooms or locations
       - Primary key describes a little bit of the row. timestamp + hash(important value)
 
@@ -31,20 +32,20 @@ Project LaundryData {
 Table Laundry {
   id uuid [pk, note:'UUID v7 has the timestamp for timescale', default: `uuidv7()`]
   timestamp timestamptz [not null]
-  global_machine_id int [not null,ref: < Machines.id]
+  machine_id int [not null,ref: < Machines.id]
   current_state MachineState [not null]
 
   // csc fields
   door_closed bool [not null]
   available bool [not null]
-  not_available_reason string [note: 'TODO: find all reasons it may not be available', not null]
+  not_available_reason text [note: 'TODO: find all reasons it may not be available', not null]
   time_remaining smallint [note: 'How long the machine will run for', not null]
 
   machine_settings json [note: 'Json because it is simple to handle and pg supports queries inside.', not null, default: `{}`]
 
   note: '''
     Every row repersents the state of a machine at a point in time.
-    Will grow quickly if collectiong more than oregontech machines.
+    Will grow quickly if collecting more than oregontech machines.
 
     Does not include a timestamp column, extract timestamp from uuid if needed.
       https://www.tigerdata.com/docs/api/latest/uuid-functions
@@ -70,9 +71,14 @@ Table Machines {
   room_id int [not null, ref: > Rooms.id]
   type MachineType [not null]
 
-  csc_machine_id uuid [not null]
   // csc fields
-  opaque_id uuid [not null]
+  csc_machine_id uuid [not null, unique, note: 'AKA Opaque Id']
+  license_plate varchar(7) [not null, note: 'follows a standard "000-AAA"']
+  sticker_number smallint [not null]
+  nfc_id uuid [not null]
+  qrCodeId text [not null, note: 'Not sure if value will stay 5 Char in length']
+  capability json [not null, default: {} ]
+  stack text [null, note: 'either upper ']
 
   note:'''
     A machine may be replaced. 
@@ -83,14 +89,19 @@ Table Machines {
 Table Rooms {
   id int [pk, not null]
   csc_id int [not null]
+  description text [null]
+  washer_count smallint [not null]
+  dryer_count smallint [not null]
   location_id int [not null, ref: > Locations.id]
 }
 
 Table Locations {
   id int [pk, not null, note: "Global location id"]
   csc_id int [not null]
-  address string [not null]
-  timezone string [not null,note:'The timezone a location is in']
+  address text [not null]
+  washer_sum smallint [note: 'Update using trigger and join all rooms']
+  dryer_sum smallint [note: 'Update using trigger and join all rooms']
+  timezone text [not null,note:'The timezone a location is in. See "pg_timezone_names"']
 }
 
 enum MachineState {
@@ -110,7 +121,7 @@ Table ApiLog {
   timestamp timestamptz [not null]
   code smallint [not null, note:'Http Response code']
   status ApiStatus [not null, default: ApiStauts.unknown, note: 'api status for timestamp. Need to fill in ApiStatus better']
-  message string [not null, note: 'Will contain an error message']
+  message text [not null, note: 'Will contain an error message']
 }
 // TODO: Fill in
 enum ApiStatus {

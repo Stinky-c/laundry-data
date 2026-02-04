@@ -39,17 +39,16 @@ Some queries can include a list of machines available or busy at room or locatio
 
 Features that are out of scope and can be finished in my free time
 
+- Tests
+  - Use mock api using json files.
+
 - Backfilling 
 
-- Extra Load claim table 
-
-  - A person can claim a load of laundry, which creates a laundry load for both washer and dryer connecting it to a log.  
-
+- Extra Load claim table
+  - A person can claim a load of laundry, which creates a laundry load for both washer and dryer connecting it to a log.
   - Adds tables; User, LaundryLoad, WasherLaundryLoads, DryerLaundryLoad UserLogClaim 
 
-- True error notifications 
-
-  - A lot of uncertainty in data from API 
-
+- True error notifications
+  - A lot of uncertainty in data from API
   - Notified when something is beginning to fail 
 

@@ -1,7 +1,7 @@
 # Schema
 
 
-![Database schema](out/schema.svg)
+![Database schema](assets/schema.svg)
 
 ## Rationale
 
@@ -21,13 +21,17 @@ Responses.
 
 ### `Machines`
 
-TODO
+Every [room](#rooms) has a varying amount of machines. This keeps track of all machines present in
+[`LaundryLog`](#laundrylog). This is maintained in a separate table to ensure space for historic 
+tracking. 
 
 ### `Rooms`
 
-TODO
+A room belongs to a [location](#locations). Maintains information like a labels, descriptions and machine type 
+counts. Use a trigger to update [locations](#locations) sum of machines
 
-### ``Locations``
+### `Locations`
 
-A location has many [Rooms](#rooms). For helper functions, each room also stores the timezone (`timezone`) it 
-is in, this is used for locale stuff for users. 
+A location has many [Rooms](#rooms). For helper functions and locale, each room also stores the
+timezone (`timezone`) it is in. Create constraint + function/procedure to check if valid timezone. 
+Throw if not valid timezone. See `pg_timezone_names` Has a label, description, and machine sum.

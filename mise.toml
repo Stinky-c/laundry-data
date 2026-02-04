@@ -5,9 +5,13 @@
 
 [tasks.render]
 description = "Renders the Schema to an SVG"
-run = "dbml-renderer -i docs/schema.dbml -o docs/out/schema.svg"
+run = "dbml-renderer -i docs/schema.dbml -o docs/assets/schema.svg"
 
 [tasks.docs]
+depends = "docs:build"
+
+[tasks."docs:build"]
+depends = "render"
 description = "Use MdBook to generate documentation"
 run = "mdbook build"
 
