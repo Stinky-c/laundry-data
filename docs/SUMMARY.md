@@ -2,6 +2,6 @@
 
 - [Notes](./Notes.md)
 - [Index]()
-- [Considerations]()
+- [Considerations](./Considerations.md)
 - [CSC Information]()
 - [Schema](Schema.md)

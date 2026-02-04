@@ -5,6 +5,8 @@
 
 ## Rationale
 
+This is a brief description and reason behind all the columns and data types.
+
 ### `ApiLog`
 
 This table keeps track of API Responses. The initial purpose of this table 

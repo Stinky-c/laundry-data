@@ -10,3 +10,6 @@ book/
 # API responses
 http/res/
 http-client.private.env.json
+
+# secret
+csc.toml
