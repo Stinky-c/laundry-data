@@ -3,20 +3,20 @@
 "npm:@softwaretechnik/dbml-renderer" = "latest"
 "github:rust-lang/mdBook" = "latest"
 
-[tasks.render]
-description = "Renders the Schema to an SVG"
-run = "dbml-renderer -i docs/schema.dbml -o docs/assets/schema.svg"
-
 [tasks.docs]
 depends = "docs:build"
 
+[tasks."docs:render"]
+description = "Renders the Schema to an SVG"
+run = ["dbml-renderer -i docs/schema.dbml -o docs/assets/schema.svg", "dbml-renderer -i docs/extended.dbml -o docs/assets/extended_schema.svg"]
+
 [tasks."docs:build"]
-depends = "render"
+depends = "docs:render"
 description = "Use MdBook to generate documentation"
 run = "mdbook build"
 
 [tasks."docs:serve"]
-depends = "render"
+depends = "docs:render"
 description = "Uses MdBook to serve live documentation"
 run = "mdbook serve --open"
 

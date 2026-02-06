@@ -66,14 +66,15 @@ Table Machines {
   id int [pk, note:'Global machine id', not null]
   room_id int [not null, ref: > Rooms.id]
   type MachineType [not null]
+  last_seen timestamptz [not null]
 
   // csc fields
-  csc_machine_id uuid [not null, unique, note: 'AKA Opaque Id']
+  csc_id uuid [not null, unique, note: 'AKA Opaque Id']
   license_plate varchar(7) [not null, note: 'follows a standard "000-AAA"']
   sticker_number smallint [not null]
   nfc_id uuid [not null]
-  qrCodeId text [not null, note: 'Not sure if value will stay 5 Char in length']
-  capability json [not null, default: {} ]
+  qr_code_id text [not null, note: 'Not sure if value will stay 5 Char in length']
+  capability json [null, default: {} ]
   stack text [null, note: 'either upper ']
 
   note:'''
@@ -118,6 +119,7 @@ Table ApiLog {
   code smallint [not null, note:'Http Response code']
   status ApiStatus [not null, default: ApiStauts.unknown, note: 'api status for timestamp. Need to fill in ApiStatus better']
   message text [not null, note: 'Will contain an error message']
+  json_hash text [not null, note: 'Hash of json response']
 }
 // TODO: Fill in
 enum ApiStatus {
@@ -125,39 +127,4 @@ enum ApiStatus {
   down
   failure
   unknown
-}
-
-// Temps based on archived api docs
-// WasherTemp, DryerTemp, MachineSettings (stored as json)
-
-enum WasherTemp {
-  cold
-  warm
-  host
-}
-
-enum DryerTemp {
-  high_temp // high-temp
-  med_temp // med-temp
-  low_temp // low-temp
-  no_temp // no-temp
-  delicates
-}
-
-enum MachineSoil {
-  normal
-  light
-  medium
-  heavy
-}
-
-enum MachineCycle {
-  normal
-  perm_press // perm-press
-  delicates
-}
-
-enum CSCTechnology {
-  CSCGo
-  DI
 }
