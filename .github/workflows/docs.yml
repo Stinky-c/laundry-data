@@ -5,9 +5,10 @@ on:
     branches:
       - master
     paths:
+      - ".github/workflows/docs.yml"
       - "docs/**"
       - "mise.toml"
-      - ".github/workflows/docs.yml"
+      - "book.toml"
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -38,7 +39,7 @@ jobs:
         run: mise run docs:build
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

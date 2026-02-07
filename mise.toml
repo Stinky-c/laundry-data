@@ -2,6 +2,8 @@
 "npm:@dbml/cli" = "latest"
 "npm:@softwaretechnik/dbml-renderer" = "latest"
 "github:rust-lang/mdBook" = "latest"
+rust = "1.93.0"
+
 
 [tasks.docs]
 depends = "docs:build"
@@ -23,3 +25,24 @@ run = "mdbook serve --open"
 [tasks."docs:clean"]
 description = "cleans mdbook directories"
 run = "mdbook clean"
+
+
+[tasks.app]
+depends = "app:build"
+
+[tasks."app:build"]
+description = "Uses rust and cargo to build app"
+run = "cargo build --release"
+
+[tasks."app:dev"]
+description = "Run debug build"
+run = "cargo run"
+
+[tasks."app:clean"]
+description = "Cargo clean"
+run = "cargo clean"
+
+
+[tasks."db:new"]
+description = "Create a new migration file"
+run = "echo TODO"

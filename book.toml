@@ -6,3 +6,7 @@ src = "docs/"
 
 [build]
 extra-watch-dirs = ["out/"]
+
+[output.html]
+site-url = "/laundry-data/"
+git-repository-url = "https://github.com/Stinky-c/laundry-data/"
