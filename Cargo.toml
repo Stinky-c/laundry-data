@@ -6,15 +6,22 @@ publish = false
 
 
 [dependencies]
-sql-middleware = { version = "0.6.0", default-features = false }
-refinery-core = { version = "0.9.0" }
-time = "0.3.47  "
+# Fails to compile without sqlite. TODO: Fix and PR
+sql-middleware = { version = "0.6.0", default-features = false, features = ["sqlite"] }
 refinery = { version = "0.9.0", features = ["enums"] }
 tokio = { version = "1", features = ["full"] }
 cfg-if = "1.0.4"
+color-eyre = "0.6"
 
 
 [features]
-default = ["postgres"]
+default = []
 postgres = ["sql-middleware/postgres", "refinery/tokio-postgres"]
-mssql = ["sql-middleware/mssql", "refinery/tiberius"]
+sqlite = ["sql-middleware/sqlite","refinery/rusqlite"]
+turso = ["sql-middleware/turso"]
+mssql = ["sql-middleware/mssql", "refinery/tiberius", "refinery/tiberius-config"]
+
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
