@@ -1,0 +1,20 @@
+[env]
+DB_TYPE = "sqlite"
+DB_HOST = ""
+DB_PORT = ""
+DB_NAME = ""
+DB_USER = ""
+DB_PASS = ""
+DB_PATH = "./testing.db"
+
+[tasks]
+[tasks."app:run"]
+run = 'cargo run --no-default-features --features "sqlite"'
+
+[tasks."app:clean"]
+depends_post = "app:rmdb"
+run = [
+    "cargo clean",
+]
+[tasks."app:rmdb"]
+run = "rm testing.db*"
