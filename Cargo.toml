@@ -17,7 +17,6 @@ color-eyre = "0.6"
 default = []
 postgres = ["sql-middleware/postgres", "refinery/tokio-postgres"]
 sqlite = ["sql-middleware/sqlite","refinery/rusqlite"]
-turso = ["sql-middleware/turso"] # TODO: remove support
 mssql = ["sql-middleware/mssql", "refinery/tiberius", "refinery/tiberius-config"]
 
 

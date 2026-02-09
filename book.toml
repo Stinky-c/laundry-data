@@ -10,3 +10,11 @@ extra-watch-dirs = ["out/"]
 [output.html]
 site-url = "/laundry-data/"
 git-repository-url = "https://github.com/Stinky-c/laundry-data/"
+
+[preprocessor.cmdrun]
+
+[preprocessor.gitinfo]
+enable = true
+timezone = "source"
+branch = "master"
+hyperlink = true

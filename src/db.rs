@@ -6,16 +6,8 @@ use std::fmt::{Debug, Formatter};
 use std::result::Result as StdResult;
 use std::str::FromStr;
 
-#[cfg(not(any(
-    feature = "postgres",
-    feature = "sqlite",
-    feature = "turso",
-    feature = "mssql"
-)))]
+#[cfg(not(any(feature = "postgres", feature = "sqlite", feature = "mssql")))]
 compile_error!("Requires at least one db driver.");
-
-#[cfg(feature = "turso")]
-compile_error!("Turso is not currently supported.");
 
 pub(crate) mod embedded {
     use crate::db::{DbConfig, DbType};
@@ -29,7 +21,7 @@ pub(crate) mod embedded {
         refinery::embed_migrations!("migrations/postgres");
     }
 
-    #[cfg(any(feature = "sqlite", feature = "turso"))]
+    #[cfg(feature = "sqlite")]
     pub(crate) mod sqlite {
         refinery::embed_migrations!("migrations/sqlite");
     }
@@ -51,8 +43,8 @@ pub(crate) mod embedded {
                 let runner = postgres::migrations::runner();
                 Ok(runner.run_async(&mut config).await?)
             }
-            #[cfg(any(feature = "sqlite", feature = "turso"))]
-            DbType::Sqlite | DbType::Turso => {
+            #[cfg(feature = "sqlite")]
+            DbType::Sqlite => {
                 let runner = sqlite::migrations::runner();
                 Ok(runner.run(&mut config)?)
             }
@@ -67,7 +59,7 @@ pub(crate) mod embedded {
     }
 }
 
-/// Type of Database. One of `postgres`, `pgsql`, `sqlite`, `mssql`, `turso`.
+/// Type of Database. One of `postgres`, `pgsql`, `sqlite`, `mssql`.
 static ENV_DB_TYPE: &str = "DB_TYPE";
 /// Hostname or ip to connect to.
 static ENV_DB_HOST: &str = "DB_HOST";
@@ -261,7 +253,6 @@ pub(crate) enum DbType {
     Postgres,
     Sqlite,
     Mssql,
-    Turso,
 }
 
 impl FromStr for DbType {
@@ -271,7 +262,6 @@ impl FromStr for DbType {
             "postgres" | "pgsql " => Ok(Self::Postgres),
             "mssql" | "sqlserver" => Ok(Self::Mssql),
             "sqlite" => Ok(Self::Sqlite),
-            "turso" => Ok(Self::Turso),
             _ => Err(format!("Unknown database type: {}", value)),
         }
     }
@@ -285,8 +275,6 @@ impl From<DbType> for DatabaseType {
             DbType::Postgres => Self::Postgres,
             #[cfg(feature = "sqlite")]
             DbType::Sqlite => Self::Sqlite,
-            #[cfg(feature = "turso")]
-            DbType::Turso => Self::Sqlite,
             #[cfg(feature = "mssql")]
             DbType::Mssql => Self::Mssql,
             _ => unimplemented!(),
@@ -299,7 +287,6 @@ impl From<DbType> for ConfigDbType {
             DbType::Postgres => Self::Postgres,
             DbType::Sqlite => Self::Sqlite,
             DbType::Mssql => Self::Mssql,
-            DbType::Turso => Self::Sqlite,
         }
     }
 }

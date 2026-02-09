@@ -3,7 +3,7 @@
 [Index](./Index.md)
 
 # Design
-1. [Architecture]()
+1. [Architecture](./Architecture.md)
 2. [Schema](./Schema.md)
 3. [Wishes](./Wishes.md)
 

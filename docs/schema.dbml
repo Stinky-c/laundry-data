@@ -3,8 +3,6 @@ Project LaundryData {
   Note: '''
     requires Postgres >=18, and timescale latest version
 
-    docker setup:
-      https://www.tigerdata.com/docs/self-hosted/latest/install/installation-docker
 
     Fast joins using CTE:
       https://www.tigerdata.com/docs/tutorials/latest/cookbook#get-faster-join-queries-with-common-table-expressions
@@ -20,8 +18,6 @@ Project LaundryData {
       - A machine history. Another table with machine id and room id in case a machine moves accorss rooms or locations
       - Primary key describes a little bit of the row. timestamp + hash(important value)
 
-    Wishes:
-      - backfilling
   '''
 }
 
