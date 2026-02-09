@@ -194,19 +194,26 @@ impl TryFrom<DbConfig> for Config {
     type Error = String;
     fn try_from(value: DbConfig) -> StdResult<Self, Self::Error> {
         match value.db_type {
+
+            #[cfg(feature = "postgres")]
             DbType::Postgres => {
                 unimplemented!() // TODO: Complete impl
             }
+            #[cfg(feature = "sqlite")]
             DbType::Sqlite => {
                 Ok(Config::new(ConfigDbType::Sqlite)
                     .set_db_path(&value.path.ok_or("Missing path")?))
             }
+
+            #[cfg(feature = "mssql")]
             DbType::Mssql => {
                 unimplemented!() // TODO: Complete impl
             }
+            #[cfg(feature = "turso")]
             DbType::Turso => {
                 unimplemented!() // TODO: Complete impl
             }
+            _ => Err("Missing driver support".to_string()),
         }
     }
 }

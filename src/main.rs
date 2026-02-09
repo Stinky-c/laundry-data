@@ -11,7 +11,7 @@ async fn main() -> Result<()> {
     let cfg = DbConfig::from_env()?;
 
     // TODO: Build pool based on `DbType` and `DbConfig`
-    let pool = ConfigAndPool::new_sqlite(cfg.clone().try_into().map_err(Report::msg)?).await?; // FIXME
+    let pool = ConfigAndPool::new_postgres(cfg.clone().try_into().map_err(Report::msg)?).await?;
 
     let report = db::embedded::run_async(cfg).await?;
     println!("{:?}", report);

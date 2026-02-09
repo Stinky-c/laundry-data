@@ -1,0 +1,16 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASS}
+      MSSQL_PID: "Developer" # Explicitly set edition
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./mssqldata:/var/opt/mssql
+
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"

@@ -7,14 +7,19 @@ DB_USER = ""
 DB_PASS = ""
 DB_PATH = "./testing.db"
 
+[vars]
+feature = "sqlite"
+
 [tasks]
 [tasks."app:run"]
-run = 'cargo run --no-default-features --features "sqlite"'
+extends = "app:run"
+
+[tasks."app:build"]
+extends = "app:build"
 
 [tasks."app:clean"]
-depends_post = "app:rmdb"
-run = [
-    "cargo clean",
-]
-[tasks."app:rmdb"]
-run = "rm testing.db*"
+extends = "app:clean"
+
+[tasks."db:clean"]
+extends = "db:clean"
+run = "rm -r testing.db*"

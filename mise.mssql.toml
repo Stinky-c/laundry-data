@@ -1,0 +1,39 @@
+[env]
+DB_TYPE = "mssql"
+DB_HOST = "localhost"
+DB_PORT = "1433"
+# Dev creds only
+DB_NAME = "master"
+DB_USER = "sa"
+DB_PASS = "Thisisapassword123!"
+DB_PATH = ""
+
+[vars]
+feature = "mssql"
+data_dir = "mssqldata"
+
+[tasks]
+[tasks."app:run"]
+extends = "app:run"
+
+[tasks."app:build"]
+extends = "app:build"
+
+[tasks."db:clean"]
+extends = "db:clean"
+run = "rm -r mssqldata"
+
+[tasks."db:pre"]
+extends = "db:pre"
+
+[tasks."db:up"]
+extends = "db:up"
+
+[tasks."db:ps"]
+extends = "db:ps"
+
+[tasks."db:logs"]
+extends = "db:logs"
+
+[tasks."db:down"]
+extends = "db:down"

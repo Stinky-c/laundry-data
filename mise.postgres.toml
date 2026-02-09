@@ -1,0 +1,37 @@
+[env]
+DB_TYPE = "postgres"
+DB_HOST = "localhost"
+DB_PORT = "5432"
+# Dev creds only
+DB_NAME = "postgres"
+DB_USER = "postgres"
+DB_PASS = "postgres"
+DB_PATH = ""
+
+[vars]
+feature = "postgres"
+data_dir = "pgsqldata"
+
+
+[tasks]
+[tasks."app:run"]
+extends = "app:run"
+
+[tasks."app:build"]
+extends = "app:build"
+
+[tasks."db:clean"]
+extends = "db:clean"
+run = "rm -r pgsqldata"
+
+[tasks."db:up"]
+extends = "db:up"
+
+[tasks."db:ps"]
+extends = "db:ps"
+
+[tasks."db:logs"]
+extends = "db:logs"
+
+[tasks."db:down"]
+extends = "db:down"

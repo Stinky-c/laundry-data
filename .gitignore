@@ -14,5 +14,7 @@ http-client.private.env.json
 # secret
 csc.toml
 
-# sqlite db
+# database files
 testing.db*
+pgsqldata/
+mssqldata/
