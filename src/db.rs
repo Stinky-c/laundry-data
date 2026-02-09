@@ -1,6 +1,6 @@
 use color_eyre::{Report, eyre::Result};
 use refinery::config::{Config, ConfigDbType};
-use sql_middleware::DatabaseType;
+use sql_middleware::{ConfigAndPool, DatabaseType};
 use std::env::var;
 use std::fmt::{Debug, Formatter};
 use std::result::Result as StdResult;
@@ -13,6 +13,9 @@ use std::str::FromStr;
     feature = "mssql"
 )))]
 compile_error!("Requires at least one db driver.");
+
+#[cfg(feature = "turso")]
+compile_error!("Turso is not currently supported.");
 
 pub(crate) mod embedded {
     use crate::db::{DbConfig, DbType};
@@ -33,13 +36,14 @@ pub(crate) mod embedded {
 
     #[cfg(feature = "mssql")]
     pub(crate) mod mssql {
-        suprefineryer::embed_migrations!("migrations/mssql");
+        refinery::embed_migrations!("migrations/mssql");
     }
 
     pub(crate) async fn run_async(db_config: DbConfig) -> Result<RunnerReport> {
         let db_type = db_config.db_type;
         let mut config: Config = db_config.try_into().map_err(Report::msg)?;
 
+        #[allow(unreachable_patterns)]
         match db_type {
             // Migrations are not compiled in if feature disabled
             #[cfg(feature = "postgres")]
@@ -194,28 +198,61 @@ impl TryFrom<DbConfig> for Config {
     type Error = String;
     fn try_from(value: DbConfig) -> StdResult<Self, Self::Error> {
         match value.db_type {
-
             #[cfg(feature = "postgres")]
-            DbType::Postgres => {
-                unimplemented!() // TODO: Complete impl
+            DbType::Postgres => new_config(value),
+
+            #[cfg(feature = "mssql")]
+            DbType::Mssql => {
+                // Blindly trust the provided cert
+                let mut cfg = new_config(value)?;
+                cfg.set_trust_cert();
+                Ok(cfg)
             }
+
             #[cfg(feature = "sqlite")]
             DbType::Sqlite => {
                 Ok(Config::new(ConfigDbType::Sqlite)
                     .set_db_path(&value.path.ok_or("Missing path")?))
             }
-
-            #[cfg(feature = "mssql")]
-            DbType::Mssql => {
-                unimplemented!() // TODO: Complete impl
-            }
-            #[cfg(feature = "turso")]
-            DbType::Turso => {
-                unimplemented!() // TODO: Complete impl
-            }
-            _ => Err("Missing driver support".to_string()),
+            _ => Err("Driver not supported".to_string()),
         }
     }
+}
+
+fn new_config(value: DbConfig) -> StdResult<Config, String> {
+    let cfg = Config::new(value.db_type.into())
+        .set_db_host(
+            value
+                .host
+                .ok_or(format!("MISSING '{ENV_DB_HOST}'"))?
+                .as_str(),
+        )
+        .set_db_port(
+            value
+                .port
+                .ok_or(format!("MISSING '{ENV_DB_PORT}'"))?
+                .to_string()
+                .as_str(),
+        )
+        .set_db_name(
+            value
+                .db_name
+                .ok_or(format!("MISSING '{ENV_DB_NAME}'"))?
+                .as_str(),
+        )
+        .set_db_user(
+            value
+                .user_name
+                .ok_or(format!("MISSING '{ENV_DB_USER}'"))?
+                .as_str(),
+        )
+        .set_db_pass(
+            value
+                .password
+                .ok_or(format!("MISSING '{ENV_DB_PASS}'"))?
+                .as_str(),
+        );
+    Ok(cfg)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -232,7 +269,7 @@ impl FromStr for DbType {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value.to_lowercase().as_str() {
             "postgres" | "pgsql " => Ok(Self::Postgres),
-            "mssql" => Ok(Self::Mssql),
+            "mssql" | "sqlserver" => Ok(Self::Mssql),
             "sqlite" => Ok(Self::Sqlite),
             "turso" => Ok(Self::Turso),
             _ => Err(format!("Unknown database type: {}", value)),
@@ -242,6 +279,7 @@ impl FromStr for DbType {
 
 impl From<DbType> for DatabaseType {
     fn from(value: DbType) -> Self {
+        #[allow(unreachable_patterns)]
         match value {
             #[cfg(feature = "postgres")]
             DbType::Postgres => Self::Postgres,
@@ -263,5 +301,26 @@ impl From<DbType> for ConfigDbType {
             DbType::Mssql => Self::Mssql,
             DbType::Turso => Self::Sqlite,
         }
+    }
+}
+
+pub(crate) async fn new_pool(config: DbConfig) -> Result<ConfigAndPool> {
+    match config.db_type {
+        #[cfg(feature = "postgres")]
+        DbType::Postgres => {
+            let cfg = config.try_into().map_err(Report::msg)?;
+            Ok(ConfigAndPool::new_postgres(cfg).await?)
+        }
+        #[cfg(feature = "sqlite")]
+        DbType::Sqlite => {
+            let cfg = config.try_into().map_err(Report::msg)?;
+            Ok(ConfigAndPool::new_sqlite(cfg).await?)
+        }
+        #[cfg(feature = "mssql")]
+        DbType::Mssql => {
+            let cfg = config.try_into().map_err(Report::msg)?;
+            Ok(ConfigAndPool::new_mssql(cfg).await?)
+        }
+        _ => unimplemented!(),
     }
 }

@@ -13,6 +13,7 @@ http-client.private.env.json
 
 # secret
 csc.toml
+mise*.local.toml
 
 # database files
 testing.db*

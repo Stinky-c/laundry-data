@@ -1,6 +1,7 @@
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    user: "${COMPOSE_UID:-1000}:${COMPOSE_GID:-1000}"
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${DB_PASS}
