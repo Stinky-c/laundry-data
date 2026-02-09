@@ -1246,7 +1246,6 @@ dependencies = [
 name = "laundry-data"
 version = "0.1.0"
 dependencies = [
- "cfg-if",
  "color-eyre",
  "refinery",
  "sql-middleware",

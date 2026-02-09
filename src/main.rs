@@ -1,6 +1,5 @@
 mod db;
 use crate::db::DbConfig;
-use color_eyre::Report;
 use color_eyre::eyre::Result;
 use sql_middleware::prelude::*;
 
@@ -10,15 +9,14 @@ async fn main() -> Result<()> {
 
     let cfg = DbConfig::from_env()?;
 
-    // TODO: Build pool based on `DbType` and `DbConfig`
-    let pool = ConfigAndPool::new_postgres(cfg.clone().try_into().map_err(Report::msg)?).await?;
+    let pool = db::new_pool(cfg.clone()).await?;
 
     let report = db::embedded::run_async(cfg).await?;
     println!("{:?}", report);
 
     let mut conn = pool.get_connection().await?;
 
-    let query = QueryAndParams::new_without_params("SELECT * FROM users");
+    let query = QueryAndParams::new_without_params("SELECT * FROM mssql");
     let res = conn.query(&query.query).select().await?;
     println!("{:?}", res);
 

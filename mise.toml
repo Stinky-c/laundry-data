@@ -63,6 +63,7 @@ run = "mkdir {{vars.data_dir}}"
 outputs = "{{vars.data_dir}}"
 
 [task_templates."db:up"]
+depends = "db:pre"
 description = "Start docker compose"
 run = "docker compose -f compose.{{vars.feature}}.yaml up -d"
 

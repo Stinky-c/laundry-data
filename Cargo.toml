@@ -10,7 +10,6 @@ publish = false
 sql-middleware = { version = "0.6.0", default-features = false, features = ["sqlite"] }
 refinery = { version = "0.9.0", features = ["enums"] }
 tokio = { version = "1", features = ["full"] }
-cfg-if = "1.0.4"
 color-eyre = "0.6"
 
 
@@ -18,7 +17,7 @@ color-eyre = "0.6"
 default = []
 postgres = ["sql-middleware/postgres", "refinery/tokio-postgres"]
 sqlite = ["sql-middleware/sqlite","refinery/rusqlite"]
-turso = ["sql-middleware/turso"]
+turso = ["sql-middleware/turso"] # TODO: remove support
 mssql = ["sql-middleware/mssql", "refinery/tiberius", "refinery/tiberius-config"]
 
 
