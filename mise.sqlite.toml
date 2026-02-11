@@ -17,9 +17,6 @@ extends = "app:run"
 [tasks."app:build"]
 extends = "app:build"
 
-[tasks."app:clean"]
-extends = "app:clean"
-
 [tasks."db:clean"]
 extends = "db:clean"
 run = "rm -r testing.db*"

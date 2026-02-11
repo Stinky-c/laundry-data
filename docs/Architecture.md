@@ -19,21 +19,21 @@ All mise tasks for each environment.
 ```console
 Name         Description
 
-<!-- cmdrun mise -E=sqlite tasks ls --local -->
+<!-- cmdrun mise tasks ls --env sqlite --local --raw -->
 ```
 
 #### `postgres`
 ```console
 Name         Description
 
-<!-- cmdrun mise -E=postgres tasks ls --local -->
+<!-- cmdrun mise tasks ls --env postgres --local --raw -->
 ```
 
 #### `mssql`
 ```console
 Name         Description
 
-<!-- cmdrun mise -E=mssql tasks ls --local  -->
+<!-- cmdrun mise tasks ls --env mssql --local --raw -->
 ```
 
 

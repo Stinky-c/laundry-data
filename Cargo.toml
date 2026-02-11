@@ -9,12 +9,11 @@ publish = false
 # Fails to compile without sqlite. TODO: Fix and PR
 sql-middleware = { version = "0.6.0", default-features = false, features = ["sqlite"] }
 refinery = { version = "0.9.0", features = ["enums"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.49.0", features = ["full"] }
 color-eyre = "0.6"
 
 
 [features]
-default = []
 postgres = ["sql-middleware/postgres", "refinery/tokio-postgres"]
 sqlite = ["sql-middleware/sqlite","refinery/rusqlite"]
 mssql = ["sql-middleware/mssql", "refinery/tiberius", "refinery/tiberius-config"]
