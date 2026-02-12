@@ -6,16 +6,27 @@ publish = false
 
 
 [dependencies]
+tokio = { version = "1.49.0", features = ["full"] }
+
 # Fails to compile without sqlite. TODO: Fix and PR
 sql-middleware = { version = "0.6.0", default-features = false, features = ["sqlite"] }
 refinery = { version = "0.9.0", features = ["enums"] }
-tokio = { version = "1.49.0", features = ["full"] }
+
 color-eyre = "0.6"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "local-time"] }
+
+reqwest = { version = "0.13.2", default-features = false, features = ["default", "json", "query", "gzip"] }
+#serde = { version = "1.0.228", features = ["derive", "alloc", "rc"] }
+#serde_json = { version = "1.0.149", features = ["alloc"] }
+
+rand = "0.10.0"
+#time = "0.3.47"
 
 
 [features]
 postgres = ["sql-middleware/postgres", "refinery/tokio-postgres"]
-sqlite = ["sql-middleware/sqlite","refinery/rusqlite"]
+sqlite = ["sql-middleware/sqlite", "refinery/rusqlite"]
 mssql = ["sql-middleware/mssql", "refinery/tiberius", "refinery/tiberius-config"]
 
 

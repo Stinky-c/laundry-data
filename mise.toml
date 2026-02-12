@@ -7,6 +7,12 @@ rust = { version = "1.93.0", profile = "default", components = "rust-src" }
 # Fork of mdbook-cmdrun with mdbook 0.5 support
 "cargo:https://github.com/roberth/mdbook-cmdrun" = "rev:3947c797d063352e0f983311c078430215cc1cca"
 
+[env]
+API_PROTO = "https"
+API_HOST = ""
+USER_AGENT = ""
+
+
 
 [tasks.docs]
 description = "Runs docs:build"
@@ -59,18 +65,22 @@ experimental = true
 [task_templates."app:run"]
 description = "Run app with only {{vars.feature}} enabled"
 run = 'cargo run --no-default-features --features "{{vars.feature}}"'
+env = { RUST_LOG = "debug,laundry_data=trace,h2=error" }
 
 [task_templates."app:build"]
 description = "Build app in release mode with only {{vars.feature}} enabled"
 run = 'cargo build --no-default-features --features "{{vars.feature}}" --release'
 
+[task_templates."app:check"]
+description = "Check with clippy with only {{vars.feature}} enabled"
+run = 'cargo clippy --no-default-features --features "{{vars.feature}}"'
 
 [task_templates."db:clean"]
 description = "Clean left over database files"
 
 [task_templates."db:pre"]
 description = "Ran before db:up"
-run = "mkdir {{vars.data_dir}}"
+run = "mkdir -p {{vars.data_dir}}"
 outputs = "{{vars.data_dir}}"
 
 [task_templates."db:up"]

@@ -210,7 +210,7 @@ impl TryFrom<DbConfig> for Config {
         }
     }
 }
-
+// TODO: fix, does not compile with only sqlite
 fn new_config(value: DbConfig) -> StdResult<Config, String> {
     let cfg = Config::new(value.db_type.into())
         .set_db_host(

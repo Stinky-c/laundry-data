@@ -19,6 +19,9 @@ extends = "app:run"
 [tasks."app:build"]
 extends = "app:build"
 
+[tasks."app:check"]
+extends = "app:check"
+
 [tasks."db:clean"]
 extends = "db:clean"
 run = "rm -r mssqldata"
