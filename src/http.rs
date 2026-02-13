@@ -2,6 +2,7 @@ use crate::types::RoomMachinesEndpoint;
 use color_eyre::Result;
 use reqwest::header::HeaderMap;
 use reqwest::{Client, header};
+use std::sync::LazyLock;
 use tokio::task::{JoinSet, id};
 use tokio::time::{Duration, sleep};
 use tracing::{error, info, instrument, trace};
@@ -83,8 +84,12 @@ fn default_headers() -> HeaderMap {
 
     map.insert(
         header::USER_AGENT,
-        header::HeaderValue::from_static(env!("USER_AGENT")),
+        header::HeaderValue::from_static((*USER_AGENT).as_str()),
     );
 
     map
 }
+
+static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
+    std::env::var("USER_AGENT").unwrap_or_else(|_|"Mozilla/5.0 (Linux; Android 11; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Mobile Safari/537.36".to_string())
+});

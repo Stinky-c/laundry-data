@@ -14,8 +14,12 @@ http-client.private.env.json
 # secret
 csc.toml
 mise*.local.toml
+*.env
 
 # database files
 testing.db*
 pgsqldata/
 mssqldata/
+
+# temp
+.idea/mise.xml

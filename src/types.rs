@@ -1,5 +1,9 @@
-const API_PROTO: &str = env!("API_PROTO");
-const API_HOST: &str = env!("API_HOST");
+use std::sync::LazyLock;
+
+static API_PROTO: LazyLock<String> =
+    LazyLock::new(|| std::env::var("API_PROTO").unwrap_or_else(|_| "https".to_string()));
+static API_HOST: LazyLock<String> =
+    LazyLock::new(|| std::env::var("API_HOST").unwrap_or_else(|_| "mycscgo.com".to_string()));
 
 /// Represents the api endpoint for all machines in a location + room
 pub(crate) struct RoomMachinesEndpoint(String, String);
@@ -10,7 +14,9 @@ impl RoomMachinesEndpoint {
     }
     pub(crate) fn build_url(&self) -> String {
         format!(
-            "{API_PROTO}://{API_HOST}/api/v1/location/{location_id}/room/{room_id}/machines",
+            "{proto}://{host}/api/v1/location/{location_id}/room/{room_id}/machines",
+            proto = *API_PROTO,
+            host = *API_HOST,
             location_id = self.0,
             room_id = self.1
         )
