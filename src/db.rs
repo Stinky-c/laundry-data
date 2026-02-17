@@ -206,44 +206,57 @@ impl TryFrom<DbConfig> for Config {
                 Ok(Config::new(ConfigDbType::Sqlite)
                     .set_db_path(&value.path.ok_or("Missing path")?))
             }
-            _ => Err("Driver not supported".to_string()),
+            _ => panic!("{:?} driver and feature not selected", value.db_type),
         }
     }
 }
-// TODO: fix, does not compile with only sqlite
+
 fn new_config(value: DbConfig) -> StdResult<Config, String> {
-    let cfg = Config::new(value.db_type.into())
-        .set_db_host(
+    let cfg = Config::new(value.db_type.into());
+    let cfg = match value.db_type {
+        #[cfg(any(feature = "postgres", feature = "mssql"))]
+        DbType::Postgres | DbType::Mssql => cfg
+            .set_db_host(
+                value
+                    .host
+                    .ok_or(format!("MISSING '{ENV_DB_HOST}'"))?
+                    .as_str(),
+            )
+            .set_db_port(
+                value
+                    .port
+                    .ok_or(format!("MISSING '{ENV_DB_PORT}'"))?
+                    .to_string()
+                    .as_str(),
+            )
+            .set_db_name(
+                value
+                    .db_name
+                    .ok_or(format!("MISSING '{ENV_DB_NAME}'"))?
+                    .as_str(),
+            )
+            .set_db_user(
+                value
+                    .user_name
+                    .ok_or(format!("MISSING '{ENV_DB_USER}'"))?
+                    .as_str(),
+            )
+            .set_db_pass(
+                value
+                    .password
+                    .ok_or(format!("MISSING '{ENV_DB_PASS}'"))?
+                    .as_str(),
+            ),
+        #[cfg(feature = "sqlite")]
+        DbType::Sqlite => cfg.set_db_path(
             value
                 .host
                 .ok_or(format!("MISSING '{ENV_DB_HOST}'"))?
                 .as_str(),
-        )
-        .set_db_port(
-            value
-                .port
-                .ok_or(format!("MISSING '{ENV_DB_PORT}'"))?
-                .to_string()
-                .as_str(),
-        )
-        .set_db_name(
-            value
-                .db_name
-                .ok_or(format!("MISSING '{ENV_DB_NAME}'"))?
-                .as_str(),
-        )
-        .set_db_user(
-            value
-                .user_name
-                .ok_or(format!("MISSING '{ENV_DB_USER}'"))?
-                .as_str(),
-        )
-        .set_db_pass(
-            value
-                .password
-                .ok_or(format!("MISSING '{ENV_DB_PASS}'"))?
-                .as_str(),
-        );
+        ),
+        _ => panic!("{:?} driver and feature not selected", value.db_type),
+    };
+
     Ok(cfg)
 }
 
@@ -308,6 +321,6 @@ pub(crate) async fn new_pool(config: DbConfig) -> Result<ConfigAndPool> {
             let cfg = config.try_into().map_err(Report::msg)?;
             Ok(ConfigAndPool::new_mssql(cfg).await?)
         }
-        _ => unimplemented!(),
+        _ => panic!("{:?} driver and feature not selected", config.db_type),
     }
 }

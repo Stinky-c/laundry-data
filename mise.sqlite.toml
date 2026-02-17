@@ -20,6 +20,9 @@ extends = "app:build"
 [tasks."app:check"]
 extends = "app:check"
 
+[tasks."app:deps"]
+extends = "app:deps"
+
 [tasks."db:clean"]
 extends = "db:clean"
 run = "rm -r testing.db*"

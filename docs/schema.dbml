@@ -24,9 +24,10 @@ Project LaundryData {
 Table Laundry {
   id uuid [pk, note:'UUID v7 has the timestamp for timescale', default: `uuidv7()`]
   timestamp timestamptz [not null]
-  machine_id int [not null,ref: < Machines.id]
+  machine_id int [not null, ref: < Machines.id]
   current_state MachineState [not null]
   time_remaining smallint [note: 'How long the machine will run for', not null]
+  backfilled bool [default: false, note: 'Back filled data']
 
   // csc fields
   door_closed bool [not null]

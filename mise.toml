@@ -13,22 +13,18 @@ API_HOST = ""
 USER_AGENT = ""
 
 
-
 [tasks.docs]
 description = "Runs docs:build"
 depends = "docs:build"
 
 [tasks."docs:render"]
 description = "Renders Schemas to an SVG"
-run = ["dbml-renderer -i docs/schema.dbml -o docs/assets/schema.svg", "dbml-renderer -i docs/extended.dbml -o docs/assets/extended_schema.svg"]
-sources = [
-    "docs/schema.dbml",
-    "docs/extended.dbml"
+run = [
+    "dbml-renderer -i docs/schema.dbml -o docs/assets/schema.svg",
+    "dbml-renderer -i docs/extended.dbml -o docs/assets/extended_schema.svg",
 ]
-outputs = [
-    "docs/assets/schema.svg",
-    "docs/assets/extended_schema.svg"
-]
+sources = ["docs/schema.dbml", "docs/extended.dbml"]
+outputs = ["docs/assets/schema.svg", "docs/assets/extended_schema.svg"]
 
 [tasks."docs:build"]
 depends = "docs:render"
@@ -42,7 +38,10 @@ run = "mdbook serve --open"
 
 [tasks."docs:clean"]
 description = "Cleans mdbook directories and generated assets"
-run = ["mdbook clean", "rm docs/assets/schema.svg docs/assets/extended_schema.svg"]
+run = [
+    "mdbook clean",
+    "rm docs/assets/schema.svg docs/assets/extended_schema.svg",
+]
 
 [tasks.db]
 description = "Run db:up"
@@ -64,16 +63,21 @@ experimental = true
 [task_templates]
 [task_templates."app:run"]
 description = "Run app with only {{vars.feature}} enabled"
-run = 'cargo run --no-default-features --features "{{vars.feature}}"'
+run = 'cargo run --no-default-features --features {{vars.feature}}'
 env = { RUST_LOG = "debug,laundry_data=trace,h2=error" }
 
 [task_templates."app:build"]
 description = "Build app in release mode with only {{vars.feature}} enabled"
-run = 'cargo build --no-default-features --features "{{vars.feature}}" --release'
+run = 'cargo build --no-default-features --features {{vars.feature}} --release'
 
 [task_templates."app:check"]
 description = "Check with clippy with only {{vars.feature}} enabled"
-run = 'cargo clippy --no-default-features --features "{{vars.feature}}"'
+run = 'cargo clippy --no-default-features --features {{vars.feature}}'
+
+[task_templates."app:deps"]
+description = "Build a dependency tree using cargo"
+run = 'cargo tree --no-default-features --features {{vars.feature}}'
+
 
 [task_templates."db:clean"]
 description = "Clean left over database files"
