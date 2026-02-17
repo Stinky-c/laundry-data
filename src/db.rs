@@ -11,7 +11,7 @@ compile_error!("Requires at least one db driver.");
 
 pub(crate) mod embedded {
     use crate::db::{DbConfig, DbType};
-    use color_eyre::{Report, eyre, eyre::Result};
+    use color_eyre::{Report, eyre::Result};
     use refinery::{Report as RunnerReport, config::Config};
 
     // Dynamically compile in migration for each driver
@@ -54,7 +54,7 @@ pub(crate) mod embedded {
                 Ok(runner.run_async(&mut config).await?)
             }
 
-            _ => Err(eyre::eyre!("Unsupported database type {:?}", db_type)),
+            _ => panic!("{:?} driver and feature not selected", db_type),
         }
     }
 }
@@ -189,6 +189,7 @@ impl TryFrom<DbConfig> for sql_middleware::MssqlOptions {
 impl TryFrom<DbConfig> for Config {
     type Error = String;
     fn try_from(value: DbConfig) -> StdResult<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
         match value.db_type {
             #[cfg(feature = "postgres")]
             DbType::Postgres => new_config(value),
@@ -211,51 +212,42 @@ impl TryFrom<DbConfig> for Config {
     }
 }
 
+
+#[cfg(any(feature = "mssql",feature = "postgres"))]
 fn new_config(value: DbConfig) -> StdResult<Config, String> {
-    let cfg = Config::new(value.db_type.into());
-    let cfg = match value.db_type {
-        #[cfg(any(feature = "postgres", feature = "mssql"))]
-        DbType::Postgres | DbType::Mssql => cfg
-            .set_db_host(
-                value
-                    .host
-                    .ok_or(format!("MISSING '{ENV_DB_HOST}'"))?
-                    .as_str(),
-            )
-            .set_db_port(
-                value
-                    .port
-                    .ok_or(format!("MISSING '{ENV_DB_PORT}'"))?
-                    .to_string()
-                    .as_str(),
-            )
-            .set_db_name(
-                value
-                    .db_name
-                    .ok_or(format!("MISSING '{ENV_DB_NAME}'"))?
-                    .as_str(),
-            )
-            .set_db_user(
-                value
-                    .user_name
-                    .ok_or(format!("MISSING '{ENV_DB_USER}'"))?
-                    .as_str(),
-            )
-            .set_db_pass(
-                value
-                    .password
-                    .ok_or(format!("MISSING '{ENV_DB_PASS}'"))?
-                    .as_str(),
-            ),
-        #[cfg(feature = "sqlite")]
-        DbType::Sqlite => cfg.set_db_path(
+    let mut cfg = Config::new(value.db_type.into());
+    cfg = cfg
+        .set_db_host(
             value
                 .host
                 .ok_or(format!("MISSING '{ENV_DB_HOST}'"))?
                 .as_str(),
-        ),
-        _ => panic!("{:?} driver and feature not selected", value.db_type),
-    };
+        )
+        .set_db_port(
+            value
+                .port
+                .ok_or(format!("MISSING '{ENV_DB_PORT}'"))?
+                .to_string()
+                .as_str(),
+        )
+        .set_db_name(
+            value
+                .db_name
+                .ok_or(format!("MISSING '{ENV_DB_NAME}'"))?
+                .as_str(),
+        )
+        .set_db_user(
+            value
+                .user_name
+                .ok_or(format!("MISSING '{ENV_DB_USER}'"))?
+                .as_str(),
+        )
+        .set_db_pass(
+            value
+                .password
+                .ok_or(format!("MISSING '{ENV_DB_PASS}'"))?
+                .as_str(),
+        );
 
     Ok(cfg)
 }
@@ -305,6 +297,7 @@ impl From<DbType> for ConfigDbType {
 }
 
 pub(crate) async fn new_pool(config: DbConfig) -> Result<ConfigAndPool> {
+    #[allow(unreachable_patterns)]
     match config.db_type {
         #[cfg(feature = "postgres")]
         DbType::Postgres => {

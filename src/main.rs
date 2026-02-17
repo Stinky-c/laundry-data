@@ -6,8 +6,7 @@ mod utils;
 use crate::db::DbConfig;
 use crate::types::RoomMachinesEndpoint;
 use color_eyre::eyre::{Result, eyre};
-use std::env;
-use std::env::VarError;
+use std::env::{VarError, var};
 use tokio::signal::ctrl_c;
 use tracing::{debug, info, instrument};
 
@@ -22,11 +21,11 @@ fn main() -> Result<()> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let worker_threads: usize = match env::var("TOKIO_WORKERS") {
+    let worker_threads: usize = match var("TOKIO_WORKERS") {
         Ok(value) => value
             .parse()
             .map_err(|_| eyre!("failed to parse TOKIO_WORKERS")),
-        Err(VarError::NotPresent) => Ok(4),
+        Err(VarError::NotPresent) => Ok(6),
         Err(err) => return Err(err.into()),
     }?;
 
