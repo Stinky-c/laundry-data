@@ -1,20 +1,24 @@
-use crate::types::RoomMachinesEndpoint;
+use crate::types::{
+    ControlMessage, ControlMessageReceiver, ControlMessageSender, ControlMessageTxRx,
+    RoomMachinesEndpoint,
+};
+use crate::utils::prelude::*;
 use color_eyre::Result;
 use reqwest::header::HeaderMap;
 use reqwest::{Client, header};
 use std::sync::LazyLock;
+use tokio::sync;
 use tokio::task::{JoinSet, id};
 use tokio::time::{Duration, sleep};
-use tracing::{error, info, instrument, trace};
-
-use crate::utils::cancel::*;
 
 #[tracing::instrument(skip_all)]
 pub(crate) async fn http_spawner(
     endpoints: Vec<RoomMachinesEndpoint>,
-) -> Result<(JoinSet<()>, Vec<CancelSender>)> {
-    let mut channels = vec![];
+    cancel_token: CancellationToken,
+) -> Result<(JoinSet<()>, ControlMessageTxRx)> {
     let mut handles = JoinSet::new();
+
+    let (control_tx, control_rx) = sync::mpsc::channel(32);
 
     info!("Spawning {N} http tasks.", N = endpoints.len());
 
@@ -23,25 +27,31 @@ pub(crate) async fn http_spawner(
         .default_headers(default_headers())
         .build()?;
 
-    for endpoint in endpoints {
-        let (tx, rx) = cancel_channel();
+    // If shim is added, use a child cancel token. It allows cancelling child tasks without
+    // cancelling parent tasks
 
+    for endpoint in endpoints {
         // Client clones are cheap, uses arc under the hood and uses a pool.
-        handles.spawn(http_task(endpoint, client.clone(), rx));
-        channels.push(tx);
+        handles.spawn(http_task(
+            endpoint,
+            client.clone(),
+            cancel_token.clone(),
+            control_tx.clone(),
+        ));
     }
 
-    Ok((handles, channels))
+    Ok((handles, (control_tx, control_rx)))
 }
 
 /// Long-lived task that handles api scrapping
-#[instrument(skip_all, fields(task_id=%id(), location_id = endpoint.location_id(), room_id = endpoint.room_id() ))]
+#[instrument(skip_all, fields(task_id=%id(), location_id = endpoint.location_id(), room_id = endpoint.room_id()))]
 async fn http_task(
     endpoint: RoomMachinesEndpoint,
     client: Client,
-    mut cancel: CancelReceiver,
+    cancel_token: CancellationToken,
+    sender: ControlMessageSender,
 ) -> () {
-    info!("Starting http task");
+    info!("Initializing http task");
 
     loop {
         info!("Running http task");
@@ -51,12 +61,14 @@ async fn http_task(
         // Cancel and delay logic
         tokio::select! {
             _ = sleep(dur) => {}
-            _ = &mut cancel => break
+            _ = cancel_token.cancelled() => break
         }
 
         let req = client.get(endpoint.build_url()).send();
         match req.await {
             Ok(res) => {
+                let _ = sender.send(ControlMessage::ApiResponse).await;
+
                 trace!("{:?}", res);
             }
             Err(err) => {
@@ -91,5 +103,5 @@ fn default_headers() -> HeaderMap {
 }
 
 static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
-    std::env::var("USER_AGENT").unwrap_or_else(|_|"Mozilla/5.0 (Linux; Android 11; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Mobile Safari/537.36".to_string())
+    std::env::var("USER_AGENT").unwrap_or_else(|_| "Mozilla/5.0 (Linux; Android 11; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Mobile Safari/537.36".to_string())
 });

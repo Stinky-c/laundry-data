@@ -11,10 +11,9 @@ compile_error!("Requires at least one db driver.");
 
 pub(crate) mod embedded {
     use crate::db::{DbConfig, DbType};
-    use color_eyre::{Report, eyre::Result};
+    use crate::utils::prelude::*;
     use refinery::{Report as RunnerReport, config::Config};
-
-    // Dynamically compile in migration for each driver
+    // Dynamically compile in migrations for each driver
 
     #[cfg(feature = "postgres")]
     pub(crate) mod postgres {
@@ -31,6 +30,7 @@ pub(crate) mod embedded {
         refinery::embed_migrations!("migrations/mssql");
     }
 
+    #[instrument(skip_all, name = "migrations", fields(db_type = ?db_config.db_type))]
     pub(crate) async fn run_async(db_config: DbConfig) -> Result<RunnerReport> {
         let db_type = db_config.db_type;
         let mut config: Config = db_config.try_into().map_err(Report::msg)?;
@@ -212,8 +212,7 @@ impl TryFrom<DbConfig> for Config {
     }
 }
 
-
-#[cfg(any(feature = "mssql",feature = "postgres"))]
+#[cfg(any(feature = "mssql", feature = "postgres"))]
 fn new_config(value: DbConfig) -> StdResult<Config, String> {
     let mut cfg = Config::new(value.db_type.into());
     cfg = cfg
@@ -252,7 +251,7 @@ fn new_config(value: DbConfig) -> StdResult<Config, String> {
     Ok(cfg)
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[non_exhaustive]
 pub(crate) enum DbType {
     Postgres,

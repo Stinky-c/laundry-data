@@ -1,5 +1,5 @@
 mod db;
-mod http;
+mod logic;
 mod types;
 mod utils;
 
@@ -8,6 +8,7 @@ use crate::types::RoomMachinesEndpoint;
 use color_eyre::eyre::{Result, eyre};
 use std::env::{VarError, var};
 use tokio::signal::ctrl_c;
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, instrument};
 
 use tracing_subscriber::layer::SubscriberExt;
@@ -40,10 +41,18 @@ fn main() -> Result<()> {
 
 #[instrument(skip_all)]
 async fn async_main(config: DbConfig) -> Result<()> {
-    let _pool = db::new_pool(config.clone()).await?;
+    info!("Beginning startup");
+    let pool = db::new_pool(config.clone()).await?;
+    // TODO: Check for database connectivity
 
+    info!("Applying migrations");
     let report = db::embedded::run_async(config).await?;
-    info!("Migrations complete: {:?}", report);
+    info!(
+        "Migrations complete: Applied {} migrations",
+        report.applied_migrations().len()
+    );
+
+    return Ok (());
 
     // let mut conn = pool.get_connection().await?;
     // let query = QueryAndParams::new_without_params("SELECT * FROM mssql");
@@ -56,16 +65,26 @@ async fn async_main(config: DbConfig) -> Result<()> {
         RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-004"),
         RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-005"),
     ];
+    // Cancel token for all sub-tasks
+    let cancel_token = CancellationToken::new();
 
-    let (http_join, http_cancel) = http::http_spawner(endpoints).await?;
+    let (http_join, (control_tx, control_rx)) =
+        logic::http_spawner(endpoints, cancel_token.clone()).await?;
+
+    let (db_join,) =
+        logic::db_spawner(pool, (control_tx.clone(), control_rx), cancel_token.clone()).await?;
 
     tokio::select! {
         _ = ctrl_c() => {
             info!("Got exit signal.");
-            utils::cancel::vec_cancel(http_cancel);
+            cancel_token.cancel();
 
             debug!("Sent cancel requests");
-            http_join.join_all().await;
+            // Maybe need to swap to a mutex
+            tokio::join!(
+                http_join.join_all(),
+                db_join.join_all()
+            );
 
             info!("Task shutdown complete. Exiting...");
             Ok(())

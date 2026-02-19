@@ -8,8 +8,7 @@ publish = false
 [dependencies]
 tokio = { version = "1.49.0", features = ["full"] }
 
-# Fails to compile without sqlite. TODO: Fix and PR
-sql-middleware = { version = "0.6.0", default-features = false, features = ["sqlite"] }
+sql-middleware = { version = "0.6.0", default-features = false }
 refinery = { version = "0.9.0", features = ["enums"] }
 
 color-eyre = "0.6"
@@ -21,12 +20,16 @@ reqwest = { version = "0.13.2", default-features = false, features = ["default",
 #serde_json = { version = "1.0.149", features = ["alloc"] }
 
 rand = "0.10.0"
+tokio-util = "0.7.18"
 #time = "0.3.47"
+
+[patch.crates-io]
+sql-middleware = { git = "https://github.com/Stinky-c/sql-middleware", rev = "950b044967bf652fbd483063b769619b7d1256c3" }
 
 
 [features]
 postgres = ["sql-middleware/postgres", "refinery/tokio-postgres"]
-sqlite = ["sql-middleware/sqlite", "refinery/rusqlite"]
+sqlite = ["sql-middleware/sqlite-bundled", "refinery/rusqlite-bundled"]
 mssql = ["sql-middleware/mssql", "refinery/tiberius", "refinery/tiberius-config"]
 
 

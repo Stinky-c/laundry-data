@@ -18,6 +18,7 @@ mise*.local.toml
 
 # database files
 testing.db*
+sqlitedata/
 pgsqldata/
 mssqldata/
 

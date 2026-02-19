@@ -29,3 +29,21 @@ impl RoomMachinesEndpoint {
         &self.1
     }
 }
+
+
+/// Multiple producer - single consumer. Safe to clone
+pub(crate) type ControlMessageSender = tokio::sync::mpsc::Sender<ControlMessage>;
+
+/// Multiple producer - single consumer. Unsafe to clone
+pub(crate) type ControlMessageReceiver = tokio::sync::mpsc::Receiver<ControlMessage>;
+
+/// Tuple of sender Tx, and Rx
+pub(crate) type ControlMessageTxRx = (ControlMessageSender, ControlMessageReceiver);
+
+#[non_exhaustive]
+pub(crate) enum ControlMessage {
+    ApiResponse,
+    MissingMachineIdent,
+    MissingRoomIdent,
+    MissingLocationIdent
+}

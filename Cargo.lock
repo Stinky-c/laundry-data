@@ -1252,6 +1252,7 @@ dependencies = [
  "reqwest",
  "sql-middleware",
  "tokio",
+ "tokio-util",
  "tracing",
  "tracing-subscriber",
 ]
@@ -1290,6 +1291,7 @@ version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "133c182a6a2c87864fe97778797e46c7e999672690dc9fa3ee8e241aa4a9c13f"
 dependencies = [
+ "cc",
  "pkg-config",
  "vcpkg",
 ]
@@ -2318,8 +2320,7 @@ dependencies = [
 [[package]]
 name = "sql-middleware"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5a6f82ccdb7d407ccf9dcc0328d7942ab725d49d6292b9da838400915c8c190"
+source = "git+https://github.com/Stinky-c/sql-middleware?rev=950b044967bf652fbd483063b769619b7d1256c3#950b044967bf652fbd483063b769619b7d1256c3"
 dependencies = [
  "async-trait",
  "bb8",

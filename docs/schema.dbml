@@ -71,7 +71,7 @@ Table Machines {
   sticker_number smallint [not null]
   nfc_id uuid [not null]
   qr_code_id text [not null, note: 'Not sure if value will stay 5 Char in length']
-  capability json [null, default: {} ]
+  capability json [null]
   stack text [null, note: 'either upper ']
 
   note:'''
@@ -114,7 +114,7 @@ Table ApiLog {
   id int [pk, not null]
   timestamp timestamptz [not null]
   code smallint [not null, note:'Http Response code']
-  status ApiStatus [not null, default: ApiStauts.unknown, note: 'api status for timestamp. Need to fill in ApiStatus better']
+  status ApiStatus [not null, default: ApiStatus.unknown, note: 'api status for timestamp. Need to fill in ApiStatus better']
   message text [not null, note: 'Will contain an error message']
   json_hash text [not null, note: 'Hash of json response']
 }
