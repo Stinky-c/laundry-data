@@ -1,5 +1,2 @@
-mod http;
-mod db;
-
-pub(crate) use http::http_spawner;
-pub(crate) use db::db_spawner;
+pub(crate) mod db;
+pub(crate) mod http;

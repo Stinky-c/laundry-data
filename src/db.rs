@@ -316,3 +316,10 @@ pub(crate) async fn new_pool(config: DbConfig) -> Result<ConfigAndPool> {
         _ => panic!("{:?} driver and feature not selected", config.db_type),
     }
 }
+
+/*
+DB:
+Try to insert, if failing send a message to a once of thread to get extra data
+https://docs.rs/tokio/latest/tokio/sync/index.html#mpsc-channel
+https://docs.rs/tokio/latest/tokio/sync/struct.RwLock.html
+ */

@@ -1,66 +1,47 @@
-use crate::types::{
-    ControlMessage, ControlMessageReceiver, ControlMessageSender, ControlMessageTxRx,
-};
+use crate::types::{Db2HttpSender, Http2DbMessage, Http2DbReceiver};
 use crate::utils::prelude::*;
-use sql_middleware::{ConfigAndPool, MiddlewarePoolConnection, SqlMiddlewareDbError};
-use tokio::task::JoinSet;
-
-#[tracing::instrument(skip_all)]
-pub(crate) async fn db_spawner(
-    pool: ConfigAndPool,
-    control_channel: ControlMessageTxRx,
-    cancel_token: CancellationToken,
-) -> Result<(JoinSet<()>,)> {
-    let mut set = JoinSet::new();
-
-    info!("Spawning DB control task");
-
-    set.spawn(db_controller(pool, control_channel, cancel_token.clone()));
-    Ok((set,))
-}
+use sql_middleware::{ConfigAndPool, MiddlewarePoolConnection};
 
 /// Controller for DB related tasks
-#[tracing::instrument(skip_all)]
-async fn db_controller(
+#[instrument(skip_all,fields(task_id=%id()))]
+pub(crate) async fn db_controller(
     pool: ConfigAndPool,
-    (control_tx, mut control_rx): ControlMessageTxRx,
+    mut http_control_rx: Http2DbReceiver,
+    db_control_tx: Db2HttpSender,
     cancel_token: CancellationToken,
 ) -> () {
-    // init
     info!("Initializing DB Control task");
-    let mut set: JoinSet<()> = JoinSet::new();
 
     loop {
         let msg = tokio::select! {
-            _ = cancel_token.cancelled() => break,
-            msg = control_rx.recv() => {
-                match msg {
+            _ = cancel_token.cancelled() => {trace!("Got cancel");break},
+            value = http_control_rx.recv() => {
+                match value {
+                    Some(v) => v,
                     None => {
-                        info!("Control channel has been closed");
+                        error!("Channel closed unexpectedly");
                         break;
                     },
-                    Some(msg) => {msg}}}
+                }
+            },
         };
-        match msg {
-            ControlMessage::ApiResponse => {
-                info!("Got response");
-            }
-            ControlMessage::MissingMachineIdent => unimplemented!(),
-            ControlMessage::MissingRoomIdent => unimplemented!(),
-            ControlMessage::MissingLocationIdent => unimplemented!(),
 
-            _ => unimplemented!(),
+        match msg {
+            Http2DbMessage::ApiResponse(res) => {
+                info!("Got response");
+                trace!("{:?}", res);
+            }
+
         }
     }
 
     // cleanup
-    ()
 }
 
 // Attempt to insert into db, if a part doesn't exist yield and message parent.
 // Wait for resume to re-attempt insert
 #[tracing::instrument(skip_all)]
-async fn db_insert(conn: MiddlewarePoolConnection, control_tx: ControlMessageSender) -> () {}
+async fn db_insert(conn: MiddlewarePoolConnection, control_tx: Db2HttpSender) -> () {}
 
 #[tracing::instrument(skip_all)]
-async fn db_task(conn: MiddlewarePoolConnection, control_tx: ControlMessageSender) -> () {}
+async fn db_task(conn: MiddlewarePoolConnection, control_tx: Db2HttpSender) -> () {}

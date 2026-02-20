@@ -1,3 +1,4 @@
+use reqwest::Response;
 use std::sync::LazyLock;
 
 static API_PROTO: LazyLock<String> =
@@ -30,20 +31,39 @@ impl RoomMachinesEndpoint {
     }
 }
 
+/// One-liner for the common task tracker and token.
+pub(crate) type TrackerWithToken = (
+    tokio_util::task::TaskTracker,
+    tokio_util::sync::CancellationToken,
+);
 
-/// Multiple producer - single consumer. Safe to clone
-pub(crate) type ControlMessageSender = tokio::sync::mpsc::Sender<ControlMessage>;
+use tokio::sync::mpsc;
+pub(crate) type Http2DbSender = mpsc::Sender<Http2DbMessage>;
+pub(crate) type Http2DbReceiver = mpsc::Receiver<Http2DbMessage>;
+pub(crate) type Http2DbTxRx = (Http2DbSender, Http2DbReceiver);
 
-/// Multiple producer - single consumer. Unsafe to clone
-pub(crate) type ControlMessageReceiver = tokio::sync::mpsc::Receiver<ControlMessage>;
+// http -> db
+pub(crate) enum Http2DbMessage {
+    ApiResponse(Response),
+}
 
-/// Tuple of sender Tx, and Rx
-pub(crate) type ControlMessageTxRx = (ControlMessageSender, ControlMessageReceiver);
+pub(crate) type Db2HttpSender = mpsc::Sender<Db2HttpMessage>;
+pub(crate) type Db2HttpReceiver = mpsc::Receiver<Db2HttpMessage>;
+pub(crate) type Db2HttpTxRx = (Db2HttpSender, Db2HttpReceiver);
 
-#[non_exhaustive]
-pub(crate) enum ControlMessage {
-    ApiResponse,
-    MissingMachineIdent,
-    MissingRoomIdent,
-    MissingLocationIdent
+// db -> http
+pub(crate) enum Db2HttpMessage {
+    Noop,
+    MissingMachineIdent {
+        room_id: String,
+        location_id: String,
+        machine_id: String,
+    },
+    MissingRoomIdent {
+        room_id: String,
+        location_id: String,
+    },
+    MissingLocationIdent {
+        location_id: String,
+    },
 }

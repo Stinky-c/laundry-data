@@ -1,55 +1,75 @@
 use crate::types::{
-    ControlMessage, ControlMessageReceiver, ControlMessageSender, ControlMessageTxRx,
-    RoomMachinesEndpoint,
+    Db2HttpMessage, Db2HttpReceiver, Http2DbMessage, Http2DbSender, RoomMachinesEndpoint,
+    TrackerWithToken,
 };
 use crate::utils::prelude::*;
-use color_eyre::Result;
-use reqwest::header::HeaderMap;
-use reqwest::{Client, header};
+use reqwest::{header, Client};
 use std::sync::LazyLock;
-use tokio::sync;
-use tokio::task::{JoinSet, id};
-use tokio::time::{Duration, sleep};
+use tokio::time::{sleep, Duration};
 
-#[tracing::instrument(skip_all)]
-pub(crate) async fn http_spawner(
-    endpoints: Vec<RoomMachinesEndpoint>,
+// Long-lived controller task. Handles control messages from the database
+#[instrument(skip_all, fields(task_id=%id()))]
+pub(crate) async fn http_controller(
+    mut control_rx: Db2HttpReceiver,
+    client: Client,
     cancel_token: CancellationToken,
-) -> Result<(JoinSet<()>, ControlMessageTxRx)> {
-    let mut handles = JoinSet::new();
+) -> () {
+    info!("Initializing HTTP Control task");
 
-    let (control_tx, control_rx) = sync::mpsc::channel(32);
+    loop {
+        let msg = tokio::select! {
+            _ = cancel_token.cancelled() => {trace!("Got cancel");break},
+            value = control_rx.recv() => {
+                match value {
+                    Some(v) => v,
+                    None => {
+                        error!("Channel closed unexpectedly");
+                        break;
+                    },
+                }
+            },
+        };
 
+        match msg {
+            Db2HttpMessage::Noop => info!("DB NOOP"),
+            Db2HttpMessage::MissingMachineIdent { .. } => unimplemented!(),
+            Db2HttpMessage::MissingRoomIdent { .. } => unimplemented!(),
+            Db2HttpMessage::MissingLocationIdent { .. } => unimplemented!(),
+        };
+    }
+}
+
+#[instrument(skip_all)]
+pub(crate) fn http_endpoints(
+    tracker: TrackerWithToken,
+    client: Client,
+    endpoints: Vec<RoomMachinesEndpoint>,
+    control_tx: Http2DbSender,
+) -> Result<()> {
     info!("Spawning {N} http tasks.", N = endpoints.len());
-
-    let client = Client::builder()
-        .gzip(true)
-        .default_headers(default_headers())
-        .build()?;
-
-    // If shim is added, use a child cancel token. It allows cancelling child tasks without
-    // cancelling parent tasks
 
     for endpoint in endpoints {
         // Client clones are cheap, uses arc under the hood and uses a pool.
-        handles.spawn(http_task(
+        tracker.0.spawn(scrape_task(
             endpoint,
             client.clone(),
-            cancel_token.clone(),
+            tracker.1.clone(),
             control_tx.clone(),
         ));
     }
 
-    Ok((handles, (control_tx, control_rx)))
+    Ok(())
 }
 
-/// Long-lived task that handles api scrapping
-#[instrument(skip_all, fields(task_id=%id(), location_id = endpoint.location_id(), room_id = endpoint.room_id()))]
-async fn http_task(
+/// Long-lived task that handles api scrapping.
+/// Does not handle extra api requests
+#[instrument(skip_all, fields(task_id=%id(), location_id = endpoint.location_id(), room_id = endpoint.room_id()
+))]
+async fn scrape_task(
     endpoint: RoomMachinesEndpoint,
     client: Client,
     cancel_token: CancellationToken,
-    sender: ControlMessageSender,
+    control_tx: Http2DbSender,
 ) -> () {
     info!("Initializing http task");
 
@@ -60,35 +80,40 @@ async fn http_task(
 
         // Cancel and delay logic
         tokio::select! {
+            _ = cancel_token.cancelled() => {trace!("Got cancel");break},
             _ = sleep(dur) => {}
-            _ = cancel_token.cancelled() => break
         }
 
         let req = client.get(endpoint.build_url()).send();
         match req.await {
             Ok(res) => {
-                let _ = sender.send(ControlMessage::ApiResponse).await;
-
-                trace!("{:?}", res);
+                let _ = control_tx.send(Http2DbMessage::ApiResponse(res)).await;
             }
             Err(err) => {
-                error!("{:?}", err);
+                error!("{:?}", err); // TODO: better api error handling
             }
         }
     }
-    info!("http task canceled");
-    ()
 }
 
-const MIN_OFFSET: u64 = 0;
-const MAX_OFFSET: u64 = 9;
+#[instrument(skip_all)]
+pub(crate) fn build_client() -> Result<Client> {
+    Ok(Client::builder()
+        .gzip(true)
+        .default_headers(default_headers())
+        .build()?)
+}
+
+const MIN_OFFSET: i64 = -9;
+const MAX_OFFSET: i64 = 9;
 fn get_minute_dur_offset() -> Duration {
     let offset = rand::random_range(MIN_OFFSET..=MAX_OFFSET);
-    Duration::from_secs(60 + offset)
+    let dur = (60 + offset) as u64; // How does this make it safe?
+    Duration::from_secs(dur)
 }
 
-fn default_headers() -> HeaderMap {
-    let mut map = HeaderMap::new();
+fn default_headers() -> header::HeaderMap {
+    let mut map = header::HeaderMap::new();
     map.insert(
         header::ACCEPT,
         header::HeaderValue::from_static("application/json"),

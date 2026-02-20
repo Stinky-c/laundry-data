@@ -4,16 +4,19 @@ mod types;
 mod utils;
 
 use crate::db::DbConfig;
-use crate::types::RoomMachinesEndpoint;
-use color_eyre::eyre::{Result, eyre};
-use std::env::{VarError, var};
+use crate::types::{Http2DbTxRx, RoomMachinesEndpoint};
+use color_eyre::eyre::{eyre, Result};
+use sql_middleware::QueryAndParams;
+use std::env::{var, VarError};
 use tokio::signal::ctrl_c;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info, instrument};
+use tokio_util::task::TaskTracker;
 
+use crate::logic::http::build_client;
+use crate::utils::prelude::*;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{EnvFilter, fmt};
+use tracing_subscriber::{fmt, EnvFilter};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -52,39 +55,48 @@ async fn async_main(config: DbConfig) -> Result<()> {
         report.applied_migrations().len()
     );
 
-    return Ok (());
-
-    // let mut conn = pool.get_connection().await?;
-    // let query = QueryAndParams::new_without_params("SELECT * FROM mssql");
-    // let res = conn.query(&query.query).select().await?;
-    // println!("{:?}", res);
-
     let endpoints = vec![
         RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-001"),
-        RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-003"),
-        RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-004"),
-        RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-005"),
+        // RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-003"),
+        // RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-004"),
+        // RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-005"),
     ];
     // Cancel token for all sub-tasks
     let cancel_token = CancellationToken::new();
+    let tracker = TaskTracker::new();
+    let tracker_with_token = (tracker.clone(), cancel_token.clone());
 
-    let (http_join, (control_tx, control_rx)) =
-        logic::http_spawner(endpoints, cancel_token.clone()).await?;
+    // Spawn tasks
 
-    let (db_join,) =
-        logic::db_spawner(pool, (control_tx.clone(), control_rx), cancel_token.clone()).await?;
+    let (http_tx, http_rx) = tokio::sync::mpsc::channel(32);
+    let (db_tx, db_rx) = tokio::sync::mpsc::channel(32);
+
+    // Http tasks
+    let http_client = build_client()?;
+    // Spawns scrappers inside
+    logic::http::http_endpoints(tracker_with_token, http_client.clone(), endpoints, http_tx)?;
+    tracker.spawn(logic::http::http_controller(
+        db_rx,
+        http_client,
+        cancel_token.clone(),
+    ));
+
+    // db tasks
+
+    tracker.spawn(logic::db::db_controller(
+        pool,
+        http_rx,
+        db_tx,
+        cancel_token.clone(),
+    ));
+
+    tracker.close();
 
     tokio::select! {
         _ = ctrl_c() => {
             info!("Got exit signal.");
             cancel_token.cancel();
-
-            debug!("Sent cancel requests");
-            // Maybe need to swap to a mutex
-            tokio::join!(
-                http_join.join_all(),
-                db_join.join_all()
-            );
+            tracker.wait().await;
 
             info!("Task shutdown complete. Exiting...");
             Ok(())
