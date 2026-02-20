@@ -1,18 +1,15 @@
 mod db;
 mod logic;
+mod models;
 mod types;
 mod utils;
 
-use crate::db::DbConfig;
-use crate::types::{Http2DbTxRx, RoomMachinesEndpoint};
-use color_eyre::eyre::{eyre, Result};
-use sql_middleware::QueryAndParams;
-use std::env::{var, VarError};
+use config::Config;
 use tokio::signal::ctrl_c;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::logic::http::build_client;
+use crate::models::config::AppConfig;
 use crate::utils::prelude::*;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -25,42 +22,35 @@ fn main() -> Result<()> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let worker_threads: usize = match var("TOKIO_WORKERS") {
-        Ok(value) => value
-            .parse()
-            .map_err(|_| eyre!("failed to parse TOKIO_WORKERS")),
-        Err(VarError::NotPresent) => Ok(6),
-        Err(err) => return Err(err.into()),
-    }?;
-
-    let config = DbConfig::from_env()?;
+    let app_config = Config::builder()
+        .add_source(
+            config::Environment::default()
+                .separator("_")
+                .ignore_empty(true),
+        )
+        .add_source(config::File::with_name("config"))
+        .build()?
+        .try_deserialize()?;
 
     tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(worker_threads)
         .enable_all()
         .build()?
-        .block_on(async_main(config))
+        .block_on(async_main(app_config))
 }
 
 #[instrument(skip_all)]
-async fn async_main(config: DbConfig) -> Result<()> {
+async fn async_main(config: AppConfig) -> Result<()> {
     info!("Beginning startup");
-    let pool = db::new_pool(config.clone()).await?;
+    let pool = db::new_pool(config.db.clone()).await?;
     // TODO: Check for database connectivity
 
     info!("Applying migrations");
-    let report = db::embedded::run_async(config).await?;
+    let report = db::embedded::run_async(config.db.clone()).await?;
     info!(
         "Migrations complete: Applied {} migrations",
         report.applied_migrations().len()
     );
 
-    let endpoints = vec![
-        RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-001"),
-        // RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-003"),
-        // RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-004"),
-        // RoomMachinesEndpoint::new("8ebe506e-0e8d-406c-bf4c-33e126ee38b4", "6321295-005"),
-    ];
     // Cancel token for all sub-tasks
     let cancel_token = CancellationToken::new();
     let tracker = TaskTracker::new();
@@ -72,11 +62,17 @@ async fn async_main(config: DbConfig) -> Result<()> {
     let (db_tx, db_rx) = tokio::sync::mpsc::channel(32);
 
     // Http tasks
-    let http_client = build_client()?;
+    let http_client = logic::http::build_client()?;
     // Spawns scrappers inside
-    logic::http::http_endpoints(tracker_with_token, http_client.clone(), endpoints, http_tx)?;
+    logic::http::http_endpoints(
+        tracker_with_token,
+        config.api.clone(),
+        http_client.clone(),
+        http_tx,
+    )?;
     tracker.spawn(logic::http::http_controller(
         db_rx,
+        config.api.clone(),
         http_client,
         cancel_token.clone(),
     ));

@@ -14,7 +14,7 @@ pub(crate) async fn db_controller(
 
     loop {
         let msg = tokio::select! {
-            _ = cancel_token.cancelled() => {trace!("Got cancel");break},
+            _ = cancel_token.cancelled() => {debug!("Got cancel");break},
             value = http_control_rx.recv() => {
                 match value {
                     Some(v) => v,
@@ -31,7 +31,6 @@ pub(crate) async fn db_controller(
                 info!("Got response");
                 trace!("{:?}", res);
             }
-
         }
     }
 

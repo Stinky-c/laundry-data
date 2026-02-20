@@ -1,7 +1,7 @@
-use color_eyre::{Report, eyre::Result};
+use color_eyre::{eyre::Result, Report};
 use refinery::config::{Config, ConfigDbType};
+use serde::Deserialize;
 use sql_middleware::{ConfigAndPool, DatabaseType};
-use std::env::var;
 use std::fmt::{Debug, Formatter};
 use std::result::Result as StdResult;
 use std::str::FromStr;
@@ -12,7 +12,7 @@ compile_error!("Requires at least one db driver.");
 pub(crate) mod embedded {
     use crate::db::{DbConfig, DbType};
     use crate::utils::prelude::*;
-    use refinery::{Report as RunnerReport, config::Config};
+    use refinery::{config::Config, Report as RunnerReport};
     // Dynamically compile in migrations for each driver
 
     #[cfg(feature = "postgres")]
@@ -30,9 +30,9 @@ pub(crate) mod embedded {
         refinery::embed_migrations!("migrations/mssql");
     }
 
-    #[instrument(skip_all, name = "migrations", fields(db_type = ?db_config.db_type))]
+    #[instrument(skip_all, name = "migrations", fields(db_type = ?db_config.r#type))]
     pub(crate) async fn run_async(db_config: DbConfig) -> Result<RunnerReport> {
-        let db_type = db_config.db_type;
+        let db_type = db_config.r#type;
         let mut config: Config = db_config.try_into().map_err(Report::msg)?;
 
         #[allow(unreachable_patterns)]
@@ -74,9 +74,9 @@ static ENV_DB_PASS: &str = "DB_PASS";
 /// Database file path. Used for sqlite.
 static ENV_DB_PATH: &str = "DB_PATH";
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Eq, PartialEq)]
 pub(crate) struct DbConfig {
-    pub(crate) db_type: DbType,
+    pub(crate) r#type: DbType,
     pub(crate) host: Option<String>,
     pub(crate) port: Option<u16>,
     pub(crate) db_name: Option<String>,
@@ -89,7 +89,7 @@ pub(crate) struct DbConfig {
 impl Debug for DbConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DbConfig")
-            .field("db_type", &self.db_type)
+            .field("db_type", &self.r#type)
             .field("host", &self.host)
             .field("port", &self.port)
             .field("db_name", &self.db_name)
@@ -99,37 +99,13 @@ impl Debug for DbConfig {
     }
 }
 
-impl DbConfig {
-    pub(crate) fn from_env() -> Result<Self> {
-        let db_type = var(ENV_DB_TYPE)?.parse::<DbType>().map_err(Report::msg)?;
-
-        let port: Option<u16> = match var(ENV_DB_PORT) {
-            Ok(value) => match value.as_str() {
-                "" => None,
-                v if !v.is_empty() => Some(value.parse().map_err(Report::msg)?),
-                _ => None, // Should be unreachable, but just in case
-            },
-            Err(_) => None,
-        };
-
-        Ok(Self {
-            db_type,
-            host: var(ENV_DB_HOST).ok(),
-            port,
-            db_name: var(ENV_DB_NAME).ok(),
-            user_name: var(ENV_DB_USER).ok(),
-            password: var(ENV_DB_PASS).ok(),
-            path: var(ENV_DB_PATH).ok(),
-        })
-    }
-}
 
 #[cfg(feature = "sqlite")]
 impl TryFrom<DbConfig> for sql_middleware::SqliteOptions {
     type Error = String;
 
     fn try_from(config: DbConfig) -> StdResult<Self, Self::Error> {
-        if config.db_type != DbType::Sqlite {
+        if config.r#type != DbType::Sqlite {
             return Err("DbType is not sqlite".to_string());
         }
 
@@ -142,7 +118,7 @@ impl TryFrom<DbConfig> for sql_middleware::PgConfig {
     type Error = String;
 
     fn try_from(config: DbConfig) -> StdResult<Self, Self::Error> {
-        if config.db_type != DbType::Postgres {
+        if config.r#type != DbType::Postgres {
             return Err("DbType is not postgres".to_string());
         }
         let mut pg = sql_middleware::PgConfig::new();
@@ -159,7 +135,7 @@ impl TryFrom<DbConfig> for sql_middleware::PgConfig {
 impl TryFrom<DbConfig> for sql_middleware::PostgresOptions {
     type Error = String;
     fn try_from(config: DbConfig) -> StdResult<Self, Self::Error> {
-        if config.db_type != DbType::Postgres {
+        if config.r#type != DbType::Postgres {
             return Err("DbType is not postgres".to_string());
         }
         let pg = config.try_into()?;
@@ -172,7 +148,7 @@ impl TryFrom<DbConfig> for sql_middleware::PostgresOptions {
 impl TryFrom<DbConfig> for sql_middleware::MssqlOptions {
     type Error = String;
     fn try_from(config: DbConfig) -> StdResult<Self, Self::Error> {
-        if config.db_type != DbType::Mssql {
+        if config.r#type != DbType::Mssql {
             return Err("DbType is not Mssql".to_string());
         }
         Ok(Self::new(
@@ -190,7 +166,7 @@ impl TryFrom<DbConfig> for Config {
     type Error = String;
     fn try_from(value: DbConfig) -> StdResult<Self, Self::Error> {
         #[allow(unreachable_patterns)]
-        match value.db_type {
+        match value.r#type {
             #[cfg(feature = "postgres")]
             DbType::Postgres => new_config(value),
 
@@ -207,14 +183,14 @@ impl TryFrom<DbConfig> for Config {
                 Ok(Config::new(ConfigDbType::Sqlite)
                     .set_db_path(&value.path.ok_or("Missing path")?))
             }
-            _ => panic!("{:?} driver and feature not selected", value.db_type),
+            _ => panic!("{:?} driver and feature not selected", value.r#type),
         }
     }
 }
 
 #[cfg(any(feature = "mssql", feature = "postgres"))]
 fn new_config(value: DbConfig) -> StdResult<Config, String> {
-    let mut cfg = Config::new(value.db_type.into());
+    let mut cfg = Config::new(value.r#type.into());
     cfg = cfg
         .set_db_host(
             value
@@ -251,8 +227,9 @@ fn new_config(value: DbConfig) -> StdResult<Config, String> {
     Ok(cfg)
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Deserialize)]
 #[non_exhaustive]
+#[serde(rename_all = "lowercase")]
 pub(crate) enum DbType {
     Postgres,
     Sqlite,
@@ -297,7 +274,7 @@ impl From<DbType> for ConfigDbType {
 
 pub(crate) async fn new_pool(config: DbConfig) -> Result<ConfigAndPool> {
     #[allow(unreachable_patterns)]
-    match config.db_type {
+    match config.r#type {
         #[cfg(feature = "postgres")]
         DbType::Postgres => {
             let cfg = config.try_into().map_err(Report::msg)?;
@@ -313,7 +290,7 @@ pub(crate) async fn new_pool(config: DbConfig) -> Result<ConfigAndPool> {
             let cfg = config.try_into().map_err(Report::msg)?;
             Ok(ConfigAndPool::new_mssql(cfg).await?)
         }
-        _ => panic!("{:?} driver and feature not selected", config.db_type),
+        _ => panic!("{:?} driver and feature not selected", config.r#type),
     }
 }
 

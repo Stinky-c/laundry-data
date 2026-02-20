@@ -8,9 +8,10 @@ rust = { version = "1.93.0", profile = "default", components = "rust-src" }
 "cargo:https://github.com/roberth/mdbook-cmdrun" = "rev:3947c797d063352e0f983311c078430215cc1cca"
 
 [env]
-API_PROTO = "https"
-API_HOST = ""
-USER_AGENT = ""
+CSC_PROTO = "https"
+CSC_HOST = "mycscgo.com"
+CSC_PORT = ""
+CSC_UA = ""
 
 
 [tasks.docs]

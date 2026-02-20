@@ -1,3 +1,4 @@
+use crate::models::config::ApiConfig;
 use crate::types::{
     Db2HttpMessage, Db2HttpReceiver, Http2DbMessage, Http2DbSender, RoomMachinesEndpoint,
     TrackerWithToken,
@@ -11,6 +12,7 @@ use tokio::time::{sleep, Duration};
 #[instrument(skip_all, fields(task_id=%id()))]
 pub(crate) async fn http_controller(
     mut control_rx: Db2HttpReceiver,
+    api_config: ApiConfig,
     client: Client,
     cancel_token: CancellationToken,
 ) -> () {
@@ -18,7 +20,7 @@ pub(crate) async fn http_controller(
 
     loop {
         let msg = tokio::select! {
-            _ = cancel_token.cancelled() => {trace!("Got cancel");break},
+            _ = cancel_token.cancelled() => {debug!("Got cancel");break},
             value = control_rx.recv() => {
                 match value {
                     Some(v) => v,
@@ -42,16 +44,26 @@ pub(crate) async fn http_controller(
 #[instrument(skip_all)]
 pub(crate) fn http_endpoints(
     tracker: TrackerWithToken,
+    api_config: ApiConfig,
     client: Client,
-    endpoints: Vec<RoomMachinesEndpoint>,
     control_tx: Http2DbSender,
 ) -> Result<()> {
-    info!("Spawning {N} http tasks.", N = endpoints.len());
+    info!("Spawning {N} http tasks.", N = api_config.endpoints.len());
 
-    for endpoint in endpoints {
+    for endpoint in api_config.endpoints {
         // Client clones are cheap, uses arc under the hood and uses a pool.
+
+        let url = format!(
+            "{proto}://{host}:{port}/api/v1/location/{location_id}/room/{room_id}/machines",
+            proto = api_config.proto,
+            host = api_config.host,
+            port = api_config.port,
+            location_id = endpoint.location_id,
+            room_id = endpoint.room_id
+        );
         tracker.0.spawn(scrape_task(
             endpoint,
+            url,
             client.clone(),
             tracker.1.clone(),
             control_tx.clone(),
@@ -63,10 +75,10 @@ pub(crate) fn http_endpoints(
 
 /// Long-lived task that handles api scrapping.
 /// Does not handle extra api requests
-#[instrument(skip_all, fields(task_id=%id(), location_id = endpoint.location_id(), room_id = endpoint.room_id()
-))]
+#[instrument(skip_all, fields(task_id=%id(), location_id = endpoint.location_id, room_id = endpoint.room_id))]
 async fn scrape_task(
     endpoint: RoomMachinesEndpoint,
+    url: String,
     client: Client,
     cancel_token: CancellationToken,
     control_tx: Http2DbSender,
@@ -80,11 +92,11 @@ async fn scrape_task(
 
         // Cancel and delay logic
         tokio::select! {
-            _ = cancel_token.cancelled() => {trace!("Got cancel");break},
+            _ = cancel_token.cancelled() => {debug!("Got cancel");break},
             _ = sleep(dur) => {}
         }
 
-        let req = client.get(endpoint.build_url()).send();
+        let req = client.get(&url).send();
         match req.await {
             Ok(res) => {
                 let _ = control_tx.send(Http2DbMessage::ApiResponse(res)).await;
@@ -121,12 +133,8 @@ fn default_headers() -> header::HeaderMap {
 
     map.insert(
         header::USER_AGENT,
-        header::HeaderValue::from_static((*USER_AGENT).as_str()),
+        header::HeaderValue::from_static(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"))),
     );
 
     map
 }
-
-static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
-    std::env::var("USER_AGENT").unwrap_or_else(|_| "Mozilla/5.0 (Linux; Android 11; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Mobile Safari/537.36".to_string())
-});

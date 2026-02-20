@@ -36,6 +36,22 @@ Name         Description
 <!-- cmdrun mise tasks ls --env mssql --local --raw -->
 ```
 
+### Dependencies
+#### `sqlite`
+```console
+<!-- cmdrun mise run --env sqlite app:deps -->
+```
+
+#### `postgres`
+```console
+<!-- cmdrun mise run --env postgres app:deps  -->
+```
+
+#### `mssql`
+```console
+<!-- cmdrun mise run --env mssql app:deps -->
+```
+
 
 ### Troubleshooting
 

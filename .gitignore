@@ -24,3 +24,4 @@ mssqldata/
 
 # temp
 .idea/mise.xml
+config.toml

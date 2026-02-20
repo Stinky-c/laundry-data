@@ -16,12 +16,14 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "local-time"] }
 
 reqwest = { version = "0.13.2", default-features = false, features = ["default", "json", "query", "gzip"] }
-#serde = { version = "1.0.228", features = ["derive", "alloc", "rc"] }
-#serde_json = { version = "1.0.149", features = ["alloc"] }
+serde = { version = "1.0.228", features = ["derive", "alloc", "rc"] }
+serde_json = { version = "1.0.149", features = ["alloc"] }
 
 rand = "0.10.0"
 tokio-util = { version = "0.7.18", features = ["rt"] }
-#time = "0.3.47"
+time = "0.3.47"
+uuid = { version = "1.21.0", features = ["serde", "v7"] }
+config = { version = "0.15.19", default-features = false, features = ["toml", "convert-case", "json"] }
 
 [patch.crates-io]
 sql-middleware = { git = "https://github.com/Stinky-c/sql-middleware", rev = "950b044967bf652fbd483063b769619b7d1256c3" }
