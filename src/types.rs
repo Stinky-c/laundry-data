@@ -1,12 +1,11 @@
 use reqwest::Response;
 use serde::Deserialize;
-use std::sync::LazyLock;
 
 /// Represents the api endpoint for all machines in a location + room
 #[derive(Debug, Deserialize, Clone)]
 pub(crate) struct RoomMachinesEndpoint {
-    pub(crate) room_id: String,
     pub(crate) location_id: String,
+    pub(crate) room_id: String,
 }
 
 /// One-liner for the common task tracker and token.
@@ -23,6 +22,7 @@ pub(crate) type Http2DbTxRx = (Http2DbSender, Http2DbReceiver);
 // http -> db
 pub(crate) enum Http2DbMessage {
     ApiResponse(Response),
+    ApiError(reqwest::Error),
 }
 
 pub(crate) type Db2HttpSender = mpsc::Sender<Db2HttpMessage>;

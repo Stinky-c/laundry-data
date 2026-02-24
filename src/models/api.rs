@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub enum MachineType {
     #[serde(rename = "washer")]
     Washer,
@@ -9,7 +9,7 @@ pub enum MachineType {
     Dryer,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub enum ModeType {
     #[serde(rename = "pressStart")]
     PressStart,
@@ -20,7 +20,7 @@ pub enum ModeType {
     #[serde(rename = "unknown")]
     Unknown,
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Machine {
     pub opaque_id: Uuid,
@@ -41,7 +41,8 @@ pub struct Machine {
     #[serde(flatten)]
     pub settings: MachineSettings,
 }
-#[derive(Debug, Serialize, Deserialize)]
+
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MachineSettings {
     pub soil: Option<String>,
@@ -49,3 +50,5 @@ pub struct MachineSettings {
     pub washer_temp: Option<String>,
     pub dryer_temp: Option<String>,
 }
+
+pub(crate) type MachineList = Vec<Machine>;

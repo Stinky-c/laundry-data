@@ -5,7 +5,6 @@ use crate::types::{
 };
 use crate::utils::prelude::*;
 use reqwest::{header, Client};
-use std::sync::LazyLock;
 use tokio::time::{sleep, Duration};
 
 // Long-lived controller task. Handles control messages from the database
@@ -99,7 +98,14 @@ async fn scrape_task(
         let req = client.get(&url).send();
         match req.await {
             Ok(res) => {
-                let _ = control_tx.send(Http2DbMessage::ApiResponse(res)).await;
+                let send_result = match res.error_for_status() {
+                    Ok(v) => control_tx.send(Http2DbMessage::ApiResponse(v)).await,
+                    Err(e) => control_tx.send(Http2DbMessage::ApiError(e)).await,
+                };
+
+                if let Err(err) = send_result {
+                    error!("Http2Db channel is closed. {:?}", err)
+                }
             }
             Err(err) => {
                 error!("{:?}", err); // TODO: better api error handling
@@ -133,7 +139,11 @@ fn default_headers() -> header::HeaderMap {
 
     map.insert(
         header::USER_AGENT,
-        header::HeaderValue::from_static(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"))),
+        header::HeaderValue::from_static(concat!(
+            env!("CARGO_PKG_NAME"),
+            "/",
+            env!("CARGO_PKG_VERSION")
+        )),
     );
 
     map

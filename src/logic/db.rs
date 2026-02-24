@@ -3,7 +3,7 @@ use crate::utils::prelude::*;
 use sql_middleware::{ConfigAndPool, MiddlewarePoolConnection};
 
 /// Controller for DB related tasks
-#[instrument(skip_all,fields(task_id=%id()))]
+#[instrument(skip_all, fields(task_id=%id()))]
 pub(crate) async fn db_controller(
     pool: ConfigAndPool,
     mut http_control_rx: Http2DbReceiver,
@@ -27,11 +27,9 @@ pub(crate) async fn db_controller(
         };
 
         match msg {
-            Http2DbMessage::ApiResponse(res) => {
-                info!("Got response");
-                trace!("{:?}", res);
-            }
-        }
+            Http2DbMessage::ApiResponse(_res) => {},
+            Http2DbMessage::ApiError(_err) => unimplemented!(),
+        };
     }
 
     // cleanup
@@ -39,8 +37,8 @@ pub(crate) async fn db_controller(
 
 // Attempt to insert into db, if a part doesn't exist yield and message parent.
 // Wait for resume to re-attempt insert
-#[tracing::instrument(skip_all)]
+#[instrument(skip_all)]
 async fn db_insert(conn: MiddlewarePoolConnection, control_tx: Db2HttpSender) -> () {}
 
-#[tracing::instrument(skip_all)]
+#[instrument(skip_all)]
 async fn db_task(conn: MiddlewarePoolConnection, control_tx: Db2HttpSender) -> () {}
