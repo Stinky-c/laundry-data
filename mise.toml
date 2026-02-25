@@ -21,11 +21,10 @@ depends = "docs:build"
 [tasks."docs:render"]
 description = "Renders Schemas to an SVG"
 run = [
-    "dbml-renderer -i docs/schema.dbml -o docs/assets/schema.svg",
-    "dbml-renderer -i docs/extended.dbml -o docs/assets/extended_schema.svg",
+    "dbml-renderer -i docs/schema.dbml -o docs/assets/schema.svg"
 ]
-sources = ["docs/schema.dbml", "docs/extended.dbml"]
-outputs = ["docs/assets/schema.svg", "docs/assets/extended_schema.svg"]
+sources = ["docs/schema.dbml"]
+outputs = ["docs/assets/schema.svg"]
 
 [tasks."docs:build"]
 depends = "docs:render"

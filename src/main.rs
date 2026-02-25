@@ -3,6 +3,7 @@ mod logic;
 mod models;
 mod types;
 mod utils;
+mod pep;
 
 use config::Config;
 use tokio::signal::ctrl_c;
