@@ -6,6 +6,7 @@ rust = { version = "1.93.0", profile = "default", components = "rust-src" }
 "cargo:mdbook-gitinfo" = "2.0.0"
 # Fork of mdbook-cmdrun with mdbook 0.5 support
 "cargo:https://github.com/roberth/mdbook-cmdrun" = "rev:3947c797d063352e0f983311c078430215cc1cca"
+jq = "1.8.1"
 
 [env]
 CSC_PROTO = "https"

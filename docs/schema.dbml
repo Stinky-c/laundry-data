@@ -10,10 +10,12 @@ project LaundryData {
     2. If any dialect exclusive features are included replicate them in the best way for the database
       and add a comment documenting the removal.
     3. If a column uses data type VARCHAR with a set length, add a constraint to ensure maintained length.
+    4. If a function does not exist, find an alternative and document it.
+    5. Ignore any comments outside of this note on the project.
 
 
     # Postgres
-    Postgres Conversion Standards. Apply these conditions when converting to postgres.
+    Postgres 18 + timescale Conversion Standards. Apply these conditions when converting to postgres.
 
     1. Create 'LaundryLog' as a Timescale Hypertable using a with statement. The following arguments apply.
       a. 'tsdb.partition_column' is 'timestamp'
@@ -21,7 +23,13 @@ project LaundryData {
 
 
     # SQL Server
-    Sql Server Conversion standards. Apply these conditions when converting to sql server.
+    Sql Server 2022 Conversion standards. Apply these conditions when converting to sql server.
+
+     1. SQL Server does not support enums, instead use a text column with check constraints.
+     2. SQL Server 2022 does not have a JSON column type, instead use a text field. It does not
+      need to be large.
+     3. SQL Server should not use datetime and timestamp columns, instead use the datetimeoffest type.
+
 
     
     # Sqlite
@@ -38,10 +46,6 @@ project LaundryData {
 }
 
 table PhysicalEndpoint {
-  // Pep is derived from room, location, and machine
-  
-  // added_on exists to allow latest lookup of a machine given
-  // location, room, sticker number
   pep_id text [not null]
   added_on timestamptz [not null, default: "CURRENT_DATE"]
 
@@ -55,14 +59,10 @@ table LaundryLog {
   pep_id text [pk, not null, ref: < PhysicalEndpoint.pep_id]
   timestamp timestamptz [pk, not null]
 
-  // Current time remaining on the display.
-  // Can go up between checks
   time_remaining smallint [not null]
-  // Will be null if available
-  not_available_reason text [null]
+  not_available_reason text [null, note: 'null if available']
   door_closed bool [not null]
-  // aka mode
-  state MachineState [not null] 
+  state MachineState [not null] // aka mode
   machine_settings json
 }
 
@@ -70,10 +70,6 @@ table Locations {
   location_id uuid [pk]
   description text 
   label text [not null]
-
-  // mssql: add check for in 'sys.time_zone_info'
-  // postgres: add check for in 'pg_timezone_names'
-  // sqlite: do not add a check
   timezone text [not null]
 }
 
