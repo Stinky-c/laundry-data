@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 publish = false
 
+[workspace]
+members = ["sql-experiment"]
 
 [dependencies]
 tokio = { version = "1.49.0", features = ["full"] }
@@ -40,3 +42,4 @@ mssql = ["sql-middleware/mssql", "refinery/tiberius", "refinery/tiberius-config"
 [lints.clippy]
 unwrap_used = "deny"
 expect_used = "deny"
+

@@ -1,0 +1,46 @@
+[package]
+name = "sql-experiment"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = "0.1.89"
+bon = "3.9.0"
+thiserror = "2"
+
+# tokio stuff for tiberius
+tokio = { version = "1", features = ["net"], optional = true }
+tokio-util = { version = "0.7", features = ["compat"], optional = true }
+
+[dependencies.tokio-postgres]
+version = "0.7"
+features = []
+optional = true
+
+[dependencies.async-sqlite]
+version = "0.5"
+features = []
+optional = true
+
+[dependencies.tiberius]
+version = "0.12"
+optional = true
+default-features = false
+features = ["default"]
+
+
+#refinery = { version = "*", features = [], optional = true }
+#refinery-core = { version = "*", features = [], optional = true }
+#refinery-macros = { version = "*", features = [], optional = true }
+#refinery-migrations = { version = "*", features = [], optional = true }
+
+[features]
+default = ["mssql", "sqlite", "postgres"] # TODO: Remove
+mssql = ["dep:tiberius", "dep:tokio", "dep:tokio-util"]
+sqlite = ["dep:async-sqlite"]
+postgres = ["dep:tokio-postgres"]
+# TODO: refinery support
+migrations = []
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
