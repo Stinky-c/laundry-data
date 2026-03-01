@@ -79,8 +79,11 @@ pub(crate) struct DbConfig {
     pub(crate) r#type: DbType,
     pub(crate) host: Option<String>,
     pub(crate) port: Option<u16>,
+    #[serde(alias = "name")]
     pub(crate) db_name: Option<String>,
+    #[serde(alias = "user")]
     pub(crate) user_name: Option<String>,
+    #[serde(alias = "pass")]
     pub(crate) password: Option<String>,
     pub(crate) path: Option<String>,
 }

@@ -4,7 +4,7 @@ Extra features I want. However, this project is for a grade.
 ## Tests
 
 Likely to use a mock api serving JSON files. Design to be API compatible with CSC so testing is a 
-simple endpoint swap.
+simple endpoint swap. E2E style tests, data is put into the database and a test grabs to check
 
 ## Backfilling
 
