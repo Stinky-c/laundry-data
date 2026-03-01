@@ -1,4 +1,4 @@
-use color_eyre::{eyre::Result, Report};
+use color_eyre::{Report, eyre::Result};
 use refinery::config::{Config, ConfigDbType};
 use serde::Deserialize;
 use sql_middleware::{ConfigAndPool, DatabaseType};
@@ -12,7 +12,7 @@ compile_error!("Requires at least one db driver.");
 pub(crate) mod embedded {
     use crate::db::{DbConfig, DbType};
     use crate::utils::prelude::*;
-    use refinery::{config::Config, Report as RunnerReport};
+    use refinery::{Report as RunnerReport, config::Config};
     // Dynamically compile in migrations for each driver
 
     #[cfg(feature = "postgres")]
@@ -98,7 +98,6 @@ impl Debug for DbConfig {
             .finish()
     }
 }
-
 
 #[cfg(feature = "sqlite")]
 impl TryFrom<DbConfig> for sql_middleware::SqliteOptions {
@@ -282,7 +281,8 @@ pub(crate) async fn new_pool(config: DbConfig) -> Result<ConfigAndPool> {
         }
         #[cfg(feature = "sqlite")]
         DbType::Sqlite => {
-            let cfg = config.try_into().map_err(Report::msg)?;
+            let mut cfg: sql_middleware::SqliteOptions = config.try_into().map_err(Report::msg)?;
+            cfg = cfg.with_translation(true);
             Ok(ConfigAndPool::new_sqlite(cfg).await?)
         }
         #[cfg(feature = "mssql")]

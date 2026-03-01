@@ -14,7 +14,9 @@ pub(crate) type TrackerWithToken = (
     tokio_util::sync::CancellationToken,
 );
 
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
+use crate::models::api::ApiLocation;
+
 pub(crate) type Http2DbSender = mpsc::Sender<Http2DbMessage>;
 pub(crate) type Http2DbReceiver = mpsc::Receiver<Http2DbMessage>;
 pub(crate) type Http2DbTxRx = (Http2DbSender, Http2DbReceiver);
@@ -36,12 +38,10 @@ pub(crate) enum Db2HttpMessage {
         room_id: String,
         location_id: String,
         machine_id: String,
+        return_channel: oneshot::Sender<()>,
     },
-    MissingRoomIdent {
-        room_id: String,
+    MissingRoomLocationIdent {
         location_id: String,
-    },
-    MissingLocationIdent {
-        location_id: String,
+        return_channel: oneshot::Sender<ApiLocation>,
     },
 }

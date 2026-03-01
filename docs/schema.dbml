@@ -74,6 +74,7 @@ table Locations {
 }
 
 table Rooms {
+  location_id uuid [pk]
   room_id text [pk]
   description text
   label text [not null]

@@ -54,7 +54,7 @@ async fn async_main(config: AppConfig) -> Result<()> {
 
     // Cancel token for all sub-tasks
     let cancel_token = CancellationToken::new();
-    let tracker = TaskTracker::new();
+    let tracker:TaskTracker = TaskTracker::new();
     let tracker_with_token = (tracker.clone(), cancel_token.clone());
 
     // Spawn tasks
@@ -81,6 +81,7 @@ async fn async_main(config: AppConfig) -> Result<()> {
     // db tasks
 
     tracker.spawn(logic::db::db_controller(
+        config.api.clone(),
         pool,
         http_rx,
         db_tx,

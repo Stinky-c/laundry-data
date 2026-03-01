@@ -52,3 +52,37 @@ pub struct MachineSettings {
 }
 
 pub(crate) type MachineList = Vec<Machine>;
+
+// TODO: Description might be null?
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiLocation {
+    pub location_id: Uuid,
+    pub description: String,
+    pub label: String,
+    pub rooms: Vec<ApiRoom>,
+}
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiRoom {
+    pub location_id: Uuid,
+    pub room_id: String,
+    pub description: String,
+    pub label: String,
+}
+
+/// Struct for inserting into the database
+#[derive(Deserialize, Debug, Eq, Hash, PartialEq)]
+pub struct DbLocation {
+    pub location_id: String,
+    pub description: String,
+    pub label: String,
+}
+
+/// Struct for inserting into the database
+#[derive(Deserialize, Debug, Eq, Hash, PartialEq)]
+pub struct DbRoom {
+    pub room_id: String,
+    pub description: String,
+    pub label: String,
+}

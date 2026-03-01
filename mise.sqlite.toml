@@ -27,6 +27,7 @@ extends = "app:deps"
 [tasks."db:clean"]
 extends = "db:clean"
 run = "rm -r {{vars.data_dir}}"
+run_windows = "rmdir {{vars.data_dir}}"
 
 [tasks."db:pre"]
 extends = "db:pre"

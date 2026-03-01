@@ -1,11 +1,14 @@
+use crate::models::api::ApiLocation;
 use crate::models::config::ApiConfig;
 use crate::types::{
     Db2HttpMessage, Db2HttpReceiver, Http2DbMessage, Http2DbSender, RoomMachinesEndpoint,
     TrackerWithToken,
 };
 use crate::utils::prelude::*;
-use reqwest::{header, Client};
-use tokio::time::{sleep, Duration};
+use crate::utils::url;
+use reqwest::{Client, header};
+use tokio::sync::oneshot;
+use tokio::time::{Duration, sleep};
 
 // Long-lived controller task. Handles control messages from the database
 #[instrument(skip_all, fields(task_id=%id()))]
@@ -34,8 +37,17 @@ pub(crate) async fn http_controller(
         match msg {
             Db2HttpMessage::Noop => info!("DB NOOP"),
             Db2HttpMessage::MissingMachineIdent { .. } => unimplemented!(),
-            Db2HttpMessage::MissingRoomIdent { .. } => unimplemented!(),
-            Db2HttpMessage::MissingLocationIdent { .. } => unimplemented!(),
+            Db2HttpMessage::MissingRoomLocationIdent {
+                location_id,
+                return_channel,
+            } => {
+                let url = url::location(&api_config, &location_id);
+                let body = get_locations_rooms_endpoint(url, client.clone())
+                    .await
+                    .unwrap(); // TODO
+
+                return_channel.send(body).unwrap();
+            }
         };
     }
 }
@@ -49,17 +61,10 @@ pub(crate) fn http_endpoints(
 ) -> Result<()> {
     info!("Spawning {N} http tasks.", N = api_config.endpoints.len());
 
-    for endpoint in api_config.endpoints {
+    for endpoint in api_config.endpoints.clone() {
         // Client clones are cheap, uses arc under the hood and uses a pool.
 
-        let url = format!(
-            "{proto}://{host}:{port}/api/v1/location/{location_id}/room/{room_id}/machines",
-            proto = api_config.proto,
-            host = api_config.host,
-            port = api_config.port,
-            location_id = endpoint.location_id,
-            room_id = endpoint.room_id
-        );
+        let url = url::machines(&api_config, &endpoint.location_id, &endpoint.room_id);
         tracker.0.spawn(scrape_task(
             endpoint,
             url,
@@ -85,9 +90,9 @@ async fn scrape_task(
     info!("Initializing http task");
 
     loop {
-        info!("Running http task");
+        trace!("Running http task");
         let dur = get_minute_dur_offset();
-        info!("Sleeping for {:?}", dur);
+        trace!("Sleeping for {:?}", dur);
 
         // Cancel and delay logic
         tokio::select! {
@@ -112,6 +117,12 @@ async fn scrape_task(
             }
         }
     }
+}
+
+#[instrument(skip_all)]
+async fn get_locations_rooms_endpoint(url: String, client: Client) -> Result<ApiLocation> {
+    let res = client.get(url).send().await?.json::<ApiLocation>().await?;
+    Ok(res)
 }
 
 #[instrument(skip_all)]
