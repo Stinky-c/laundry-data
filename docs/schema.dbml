@@ -29,6 +29,7 @@ project LaundryData {
      2. SQL Server 2022 does not have a JSON column type, instead use a text field. It does not
       need to be large.
      3. SQL Server should not use datetime and timestamp columns, instead use the datetimeoffest type.
+     4. TEXT columns are a postgres feature, instead use a NVCHAR(255)
 
 
     
@@ -62,7 +63,7 @@ table LaundryLog {
   time_remaining smallint [not null]
   not_available_reason text [null, note: 'null if available']
   door_closed bool [not null]
-  state MachineState [not null] // aka mode
+  state MachineState [not null]
   machine_settings json
 }
 
