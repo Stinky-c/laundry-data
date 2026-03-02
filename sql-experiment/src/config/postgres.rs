@@ -1,12 +1,19 @@
+use crate::config::traits::ToConnectionPool;
+use crate::error::PostgresError;
+use crate::pool::PoolConnection;
+use async_trait::async_trait;
 use tokio_postgres::Config as TpConfig;
 
 #[derive(bon::Builder)]
 #[builder(on(String, into))]
 pub struct PostgresConfig {
+    #[builder(default = PostgresConfig::default_host())]
     pub(crate) host: String,
+    #[builder(default = PostgresConfig::default_port())]
     pub(crate) port: u16,
     pub(crate) user: String,
     pub(crate) password: String,
+    #[builder(default = PostgresConfig::default_database())]
     pub(crate) database: String,
 }
 
@@ -71,5 +78,14 @@ impl Into<TpConfig> for PostgresConfig {
             .to_owned();
 
         conf
+    }
+}
+
+#[async_trait]
+impl ToConnectionPool for PostgresConfig {
+    type Error = PostgresError;
+
+    async fn init_connection(self) -> Result<PoolConnection, Self::Error> {
+        todo!()
     }
 }

@@ -4,11 +4,10 @@ mod mssql;
 mod postgres;
 #[cfg(feature = "sqlite")]
 mod sqlite;
-pub mod traits;
 
 pub enum PoolConnection {
     #[cfg(feature = "mssql")]
-    Mssql(mssql::TokioClient),
+    Mssql(crate::config::mssql::TokioClient),
     #[cfg(feature = "postgres")]
     Postgres,
     #[cfg(feature = "sqlite")]
