@@ -15,7 +15,7 @@ pub enum DatabaseType {
 
 pub mod prelude {
     pub use crate::pool::PoolConnection;
-    pub use crate::config::traits::ToConnectionPool;
+    pub use crate::config::traits::ToPool;
 }
 
 #[cfg(feature = "mssql")]

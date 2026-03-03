@@ -1,5 +1,5 @@
 #[derive(thiserror::Error, Debug)]
 pub enum SqlitePoolError {
     #[error(transparent)]
-    AsyncSqlite(#[from] async_sqlite::Error),
+    RusqliteError(#[from] rusqlite::Error),
 }

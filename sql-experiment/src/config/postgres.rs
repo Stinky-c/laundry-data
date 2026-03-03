@@ -1,6 +1,5 @@
-use crate::config::traits::ToConnectionPool;
+use crate::config::traits::ToPool;
 use crate::error::PostgresError;
-use crate::pool::PoolConnection;
 use async_trait::async_trait;
 use tokio_postgres::Config as TpConfig;
 
@@ -82,10 +81,10 @@ impl Into<TpConfig> for PostgresConfig {
 }
 
 #[async_trait]
-impl ToConnectionPool for PostgresConfig {
+impl ToPool for PostgresConfig {
     type Error = PostgresError;
 
-    async fn init_connection(self) -> Result<PoolConnection, Self::Error> {
+    async fn to_pool(&self) -> Result<(), Self::Error> {
         todo!()
     }
 }

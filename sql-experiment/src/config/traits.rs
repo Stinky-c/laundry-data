@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 #[async_trait]
-pub trait ToConnectionPool {
+pub trait ToPool {
     type Error;
-    async fn init_connection(self) -> Result<crate::pool::PoolConnection, Self::Error>;
+    async fn to_pool(&self) -> Result<(), Self::Error>;
 }

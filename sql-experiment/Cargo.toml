@@ -12,21 +12,19 @@ thiserror = "2"
 tokio = { version = "1", features = ["net"], optional = true }
 tokio-util = { version = "0.7", features = ["compat"], optional = true }
 
-[dependencies.tokio-postgres]
-version = "0.7"
-features = []
-optional = true
+# Postgres
+deadpool-postgres = { version = "0.14.1", features = [], optional = true }
+tokio-postgres = { version = "0.7", features = [], optional = true }
 
-[dependencies.async-sqlite]
-version = "0.5"
-features = []
-optional = true
+# Sqlite
+deadpool-sqlite = { version = "0.12.1", features = [], optional = true }
+rusqlite = { version = "0.37", features = [], optional = true }
 
-[dependencies.tiberius]
-version = "0.12"
-optional = true
-default-features = false
-features = ["default"]
+# Sql Server
+deadpool-tiberius = { version = "0.1.9", features = [], optional = true }
+tiberius = { version = "0.12", features = [], optional = true }
+
+
 
 
 #refinery = { version = "*", features = [], optional = true }
@@ -36,9 +34,9 @@ features = ["default"]
 
 [features]
 default = ["mssql", "sqlite", "postgres"] # TODO: Remove
-mssql = ["dep:tiberius", "dep:tokio", "dep:tokio-util"]
-sqlite = ["dep:async-sqlite"]
-postgres = ["dep:tokio-postgres"]
+mssql = ["dep:tiberius", "dep:deadpool-tiberius","dep:tokio", "dep:tokio-util"]
+sqlite = ["dep:deadpool-sqlite", "dep:rusqlite"]
+postgres = ["dep:tokio-postgres","dep:deadpool-postgres"]
 # TODO: refinery support
 migrations = []
 

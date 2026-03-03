@@ -6,9 +6,5 @@ async fn test() -> Result<(), PostgresError> {
         .password("postgres")
         .build();
 
-    let _client = config.init_connection().await?;
-
-
-
     Ok(())
 }
