@@ -76,8 +76,6 @@ impl Into<TbConfig> for MssqlConfig {
 }
 
 use crate::error::MsSqlError;
-use crate::pool::PoolConnection;
-
 use crate::config::traits::ToPool;
 use async_trait::async_trait;
 use tiberius::Client;

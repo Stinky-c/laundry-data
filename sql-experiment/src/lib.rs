@@ -14,7 +14,7 @@ pub enum DatabaseType {
 }
 
 pub mod prelude {
-    pub use crate::pool::PoolConnection;
+    pub use crate::pool::Pool;
     pub use crate::config::traits::ToPool;
 }
 

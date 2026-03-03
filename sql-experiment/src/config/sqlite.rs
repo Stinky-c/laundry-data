@@ -7,7 +7,7 @@ pub struct SqliteConfig {
     pub(crate) path: PathBuf,
     #[builder(default)]
     pub(crate) open_flags: rusqlite::OpenFlags,
-    #[builder(default = 2)]
+    #[builder(default = 4)]
     pub(crate) max_connections: usize,
 }
 

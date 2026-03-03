@@ -17,8 +17,8 @@ deadpool-postgres = { version = "0.14.1", features = [], optional = true }
 tokio-postgres = { version = "0.7", features = [], optional = true }
 
 # Sqlite
-deadpool-sqlite = { version = "0.12.1", features = [], optional = true }
-rusqlite = { version = "0.37", features = [], optional = true }
+deadpool-sqlite = { version = "0.12.1", features = ["bundled"], optional = true }
+rusqlite = { version = "0.37", features = ["bundled"], optional = true }
 
 # Sql Server
 deadpool-tiberius = { version = "0.1.9", features = [], optional = true }
@@ -34,9 +34,9 @@ tiberius = { version = "0.12", features = [], optional = true }
 
 [features]
 default = ["mssql", "sqlite", "postgres"] # TODO: Remove
-mssql = ["dep:tiberius", "dep:deadpool-tiberius","dep:tokio", "dep:tokio-util"]
+mssql = ["dep:tiberius", "dep:deadpool-tiberius", "dep:tokio", "dep:tokio-util"]
 sqlite = ["dep:deadpool-sqlite", "dep:rusqlite"]
-postgres = ["dep:tokio-postgres","dep:deadpool-postgres"]
+postgres = ["dep:tokio-postgres", "dep:deadpool-postgres"]
 # TODO: refinery support
 migrations = []
 

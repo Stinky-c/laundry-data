@@ -2,7 +2,7 @@ use sql_experiment::sqlite_prelude::*;
 
 #[tokio::test]
 async fn test() -> Result<(), SqlitePoolError> {
-    let config = SqliteConfig::builder().path(":memory:").build();
+    let config = sql_experiment::config::sqlite::SqliteConfig::builder();
 
 
     Ok(())
