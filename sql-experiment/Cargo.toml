@@ -7,6 +7,8 @@ edition = "2024"
 async-trait = "0.1.89"
 bon = "3.9.0"
 thiserror = "2"
+enum_dispatch = "0.3.13"
+deadpool = { version = "0.12.3", features = ["managed"] }
 
 # tokio stuff for tiberius
 tokio = { version = "1", features = ["net"], optional = true }
@@ -39,6 +41,10 @@ sqlite = ["dep:deadpool-sqlite", "dep:rusqlite"]
 postgres = ["dep:tokio-postgres", "dep:deadpool-postgres"]
 # TODO: refinery support
 migrations = []
+
+# Add features to the CommonDatabaseConfig object
+"config_serde" = []
+"config_builder" = []
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

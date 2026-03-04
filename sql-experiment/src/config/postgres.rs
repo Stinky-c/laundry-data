@@ -1,30 +1,31 @@
 use crate::config::traits::ToPool;
-use crate::error::PostgresError;
-use async_trait::async_trait;
-use tokio_postgres::Config as TpConfig;
+use crate::pool::common::Pool;
+use crate::pool::postgres::PostgresPool;
+use tokio_postgres::NoTls;
 
-#[derive(bon::Builder)]
-#[builder(on(String, into))]
 pub struct PostgresConfig {
-    #[builder(default = PostgresConfig::default_host())]
-    pub(crate) host: String,
-    #[builder(default = PostgresConfig::default_port())]
-    pub(crate) port: u16,
-    pub(crate) user: String,
-    pub(crate) password: String,
-    #[builder(default = PostgresConfig::default_database())]
-    pub(crate) database: String,
+    inner: deadpool_postgres::Manager,
 }
 
-impl Default for PostgresConfig {
-    fn default() -> Self {
-        Self {
-            host: Self::default_host(),
-            port: Self::default_port(),
-            user: Self::default_username(),
-            password: Self::default_password(),
-            database: Self::default_database(),
-        }
+#[bon::bon]
+impl PostgresConfig {
+    #[builder(on(String, into))]
+    pub fn builder(
+        #[builder(default = PostgresConfig::default_host())] host: String,
+        #[builder(default = PostgresConfig::default_port())] port: u16,
+        user: String,
+        password: String,
+        #[builder(default = PostgresConfig::default_database())] database: String,
+    ) -> Self {
+        let config = tokio_postgres::Config::new()
+            .host(host)
+            .port(port)
+            .user(user)
+            .password(password)
+            .to_owned();
+        let manager = deadpool_postgres::Manager::new(config, NoTls);
+
+        Self { inner: manager }
     }
 }
 
@@ -35,20 +36,6 @@ impl PostgresConfig {
     /// - Defaults to: `localhost`
     fn default_host() -> String {
         "localhost".to_string()
-    }
-
-    /// Get the default username
-    ///
-    /// - Defaults to: `postgres`
-    fn default_username() -> String {
-        "postgres".to_string()
-    }
-
-    /// Get the default password
-    ///
-    /// - Defaults to: `postgres`
-    fn default_password() -> String {
-        "postgres".to_string()
     }
 
     /// Get the default port
@@ -66,25 +53,10 @@ impl PostgresConfig {
     }
 }
 
-impl Into<TpConfig> for PostgresConfig {
-    fn into(self) -> TpConfig {
-        let conf = TpConfig::new()
-            .host(self.host)
-            .port(self.port)
-            .user(self.user)
-            .password(self.password)
-            .dbname(self.database)
-            .to_owned();
-
-        conf
-    }
-}
-
-#[async_trait]
 impl ToPool for PostgresConfig {
-    type Error = PostgresError;
-
-    async fn to_pool(&self) -> Result<(), Self::Error> {
-        todo!()
+    type Error = crate::error::PostgresError;
+    fn to_pool(self) -> Result<Pool, Self::Error> {
+        let inner = deadpool_postgres::Pool::builder(self.inner).build()?;
+        Ok(Pool::Postgres(PostgresPool::new(inner)))
     }
 }

@@ -1,7 +1,12 @@
 #[derive(thiserror::Error, Debug)]
 pub enum PostgresError {
+
     #[error(transparent)]
-    ServerCommunicationError(#[from] tokio_postgres::Error),
+    PoolBuildError(#[from] deadpool_postgres::BuildError),
+
     #[error(transparent)]
-    PostgresError(#[from] tokio_postgres::error::DbError),
+    PoolError(#[from] deadpool_postgres::PoolError),
+
+    #[error("{0}")]
+    Other(String),
 }

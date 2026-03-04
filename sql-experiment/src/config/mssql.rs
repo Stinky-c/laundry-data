@@ -1,19 +1,41 @@
-use tiberius::{AuthMethod, Config as TbConfig};
+use crate::config::traits::ToPool;
+use crate::pool::common::Pool;
+use crate::pool::mssql::MsSqlPool;
+use tiberius::AuthMethod;
 
-#[derive(bon::Builder)]
-#[builder(on(String, into))]
 pub struct MssqlConfig {
-    #[builder(default = MssqlConfig::default_host())]
-    pub(crate) host: String,
-    #[builder(default = MssqlConfig::default_port())]
-    pub(crate) port: u16,
-    pub(crate) auth_method: AuthMethod,
-    #[builder(default = MssqlConfig::default_database())]
-    pub(crate) database: String,
-    pub(crate) instance_name: Option<String>,
-    pub(crate) application_name: Option<String>,
-    #[builder(default = MssqlConfig::default_encryption())]
-    pub(crate) encryption: tiberius::EncryptionLevel,
+    inner: deadpool_tiberius::Manager,
+}
+
+#[bon::bon]
+impl MssqlConfig {
+    #[builder(on(String, into))]
+    pub fn builder(
+        #[builder(default = MssqlConfig::default_host())] host: String,
+        #[builder(default = MssqlConfig::default_port())] port: u16,
+        auth_method: AuthMethod,
+        #[builder(default = MssqlConfig::default_database())] database: String,
+        instance_name: Option<String>,
+        application_name: Option<String>,
+        #[builder(default = MssqlConfig::default_encryption())]
+        encryption: tiberius::EncryptionLevel,
+    ) -> Self {
+        let mut manager = deadpool_tiberius::Manager::new()
+            .host(host)
+            .port(port)
+            .authentication(auth_method)
+            .encryption(encryption);
+
+        if let Some(instance_name) = instance_name {
+            manager = manager.instance_name(instance_name);
+        }
+
+        if let Some(application_name) = application_name {
+            manager = manager.application_name(application_name);
+        }
+
+        Self { inner: manager }
+    }
 }
 
 // Default fields
@@ -47,48 +69,10 @@ impl MssqlConfig {
     }
 }
 
-impl MssqlConfig {
-    pub(crate) fn into_tiberius_config(self) -> TbConfig {
-        self.into()
-    }
-}
-
-impl Into<TbConfig> for MssqlConfig {
-    fn into(self) -> TbConfig {
-        let mut conf = TbConfig::new();
-
-        conf.host(self.host);
-        conf.port(self.port);
-        conf.database(self.database);
-        conf.encryption(self.encryption);
-        conf.authentication(self.auth_method);
-        conf.trust_cert(); // TODO: Remove blindly trusting db
-
-        if let Some(instance_name) = self.instance_name {
-            conf.instance_name(instance_name);
-        }
-        if let Some(application_name) = self.application_name {
-            conf.application_name(application_name);
-        }
-
-        conf
-    }
-}
-
-use crate::error::MsSqlError;
-use crate::config::traits::ToPool;
-use async_trait::async_trait;
-use tiberius::Client;
-use tokio::net::TcpStream;
-use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
-
-pub type TokioClient = Client<Compat<TcpStream>>;
-
-#[async_trait]
 impl ToPool for MssqlConfig {
-    type Error = MsSqlError;
-
-    async fn to_pool(&self) -> Result<(), Self::Error> {
-        todo!()
+    type Error = crate::error::MsSqlError;
+    fn to_pool(self) -> Result<Pool, Self::Error> {
+        let inner = deadpool_tiberius::Pool::builder(self.inner).build()?;
+        Ok(Pool::MsSql(MsSqlPool::new(inner)))
     }
 }

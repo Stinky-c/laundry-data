@@ -1,8 +1,13 @@
-
+use tiberius::error::Error as TiberiusError;
 #[derive(thiserror::Error, Debug)]
 pub enum MsSqlError {
+
     #[error(transparent)]
-    TiberiusError(#[from] tiberius::error::Error),
+    PoolBuildError(#[from] deadpool::managed::BuildError),
+
     #[error(transparent)]
-    IoError(#[from] std::io::Error),
+    PoolError(#[from] deadpool::managed::PoolError<TiberiusError>),
+
+    #[error("{0}")]
+    Other(String),
 }

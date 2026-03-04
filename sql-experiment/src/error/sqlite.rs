@@ -1,5 +1,12 @@
 #[derive(thiserror::Error, Debug)]
-pub enum SqlitePoolError {
+pub enum SqliteError {
+
     #[error(transparent)]
-    RusqliteError(#[from] rusqlite::Error),
+    PoolBuildError(#[from] deadpool_sqlite::BuildError),
+
+    #[error(transparent)]
+    PoolError(#[from] deadpool_sqlite::PoolError),
+
+    #[error("{0}")]
+    Other(String),
 }

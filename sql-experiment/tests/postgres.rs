@@ -6,5 +6,8 @@ async fn test() -> Result<(), PostgresError> {
         .password("postgres")
         .build();
 
+    let pool = config.to_pool()?;
+
+
     Ok(())
 }

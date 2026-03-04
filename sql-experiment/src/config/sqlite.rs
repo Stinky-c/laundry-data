@@ -1,27 +1,28 @@
+use crate::config::traits::ToPool;
+use crate::pool::common::Pool;
+use crate::pool::sqlite::SqlitePool;
 use std::path::PathBuf;
 
-#[derive(bon::Builder)]
-#[builder(on(String, into))]
 pub struct SqliteConfig {
-    #[builder(into)]
-    pub(crate) path: PathBuf,
-    #[builder(default)]
-    pub(crate) open_flags: rusqlite::OpenFlags,
-    #[builder(default = 4)]
-    pub(crate) max_connections: usize,
+    inner: deadpool_sqlite::Manager,
 }
 
-// Cannot impl default. Needs path
+#[bon::bon]
+impl SqliteConfig {
+    #[builder(on(String, into))]
+    pub fn builder(#[builder(into)] path: PathBuf) -> Self {
+        let config = deadpool_sqlite::Config::new(path);
+        let manager =
+            deadpool_sqlite::Manager::from_config(&config, deadpool_sqlite::Runtime::Tokio1);
+        Self { inner: manager }
+    }
+}
 
-use crate::config::traits::ToPool;
-use crate::error::SqlitePoolError;
-use async_trait::async_trait;
-
-#[async_trait]
 impl ToPool for SqliteConfig {
-    type Error = SqlitePoolError;
+    type Error = crate::error::SqliteError;
 
-    async fn to_pool(&self) -> Result<(), Self::Error> {
-        todo!()
+    fn to_pool(self) -> Result<Pool, Self::Error> {
+        let inner = deadpool_sqlite::Pool::builder(self.inner).build()?;
+        Ok(Pool::Sqlite(SqlitePool::new(inner)))
     }
 }

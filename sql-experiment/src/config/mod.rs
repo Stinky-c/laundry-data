@@ -1,3 +1,5 @@
+use crate::DatabaseType;
+
 #[cfg(feature = "mssql")]
 pub mod mssql;
 #[cfg(feature = "postgres")]
@@ -16,3 +18,12 @@ pub enum ConfigType {
 }
 
 // TODO: add ssl support
+
+/// A single object with all possible fields for all databases.
+/// Conversion is handled by a trait and the type is determined by the mandatory
+///
+#[cfg_attr(feature = "config_builder", derive(bon::Builder))]
+pub struct CommonDatabaseConfig {
+    //TODO add serde + builder support
+    r#type: DatabaseType,
+}

@@ -14,7 +14,7 @@ pub enum DatabaseType {
 }
 
 pub mod prelude {
-    pub use crate::pool::Pool;
+    pub use crate::pool::common::Pool;
     pub use crate::config::traits::ToPool;
 }
 
@@ -37,6 +37,6 @@ pub mod postgres_prelude {
 #[cfg(feature = "sqlite")]
 pub mod sqlite_prelude {
     pub use crate::config::sqlite::SqliteConfig;
-    pub use crate::error::SqlitePoolError;
+    pub use crate::error::SqliteError;
     pub use crate::prelude::*;
 }
