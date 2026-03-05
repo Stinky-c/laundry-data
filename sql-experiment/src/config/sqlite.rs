@@ -1,4 +1,5 @@
 use crate::config::traits::ToPool;
+use crate::error::pool::PoolBuilderError;
 use crate::pool::common::Pool;
 use crate::pool::sqlite::SqlitePool;
 use std::path::PathBuf;
@@ -19,9 +20,7 @@ impl SqliteConfig {
 }
 
 impl ToPool for SqliteConfig {
-    type Error = crate::error::SqliteError;
-
-    fn to_pool(self) -> Result<Pool, Self::Error> {
+    fn to_pool(self) -> Result<Pool, PoolBuilderError> {
         let inner = deadpool_sqlite::Pool::builder(self.inner).build()?;
         Ok(Pool::Sqlite(SqlitePool::new(inner)))
     }

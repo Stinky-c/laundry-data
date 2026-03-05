@@ -1,4 +1,5 @@
 use crate::config::traits::ToPool;
+use crate::error::pool::PoolBuilderError;
 use crate::pool::common::Pool;
 use crate::pool::mssql::MsSqlPool;
 use tiberius::AuthMethod;
@@ -24,7 +25,8 @@ impl MssqlConfig {
             .host(host)
             .port(port)
             .authentication(auth_method)
-            .encryption(encryption);
+            .encryption(encryption)
+            .database(database);
 
         if let Some(instance_name) = instance_name {
             manager = manager.instance_name(instance_name);
@@ -70,8 +72,7 @@ impl MssqlConfig {
 }
 
 impl ToPool for MssqlConfig {
-    type Error = crate::error::MsSqlError;
-    fn to_pool(self) -> Result<Pool, Self::Error> {
+    fn to_pool(self) -> Result<Pool, PoolBuilderError> {
         let inner = deadpool_tiberius::Pool::builder(self.inner).build()?;
         Ok(Pool::MsSql(MsSqlPool::new(inner)))
     }

@@ -1,3 +1,6 @@
+use crate::connection::common::{Execute, Query};
+use async_trait::async_trait;
+
 pub struct SqliteConnection {
     inner: deadpool_sqlite::Object,
 }
@@ -7,3 +10,7 @@ impl SqliteConnection {
         Self { inner }
     }
 }
+
+#[async_trait]
+impl Query for SqliteConnection {}
+impl Execute for SqliteConnection {}

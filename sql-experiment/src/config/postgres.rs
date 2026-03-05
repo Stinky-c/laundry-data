@@ -1,4 +1,5 @@
 use crate::config::traits::ToPool;
+use crate::error::pool::PoolBuilderError;
 use crate::pool::common::Pool;
 use crate::pool::postgres::PostgresPool;
 use tokio_postgres::NoTls;
@@ -22,6 +23,7 @@ impl PostgresConfig {
             .port(port)
             .user(user)
             .password(password)
+            .dbname(database)
             .to_owned();
         let manager = deadpool_postgres::Manager::new(config, NoTls);
 
@@ -54,8 +56,7 @@ impl PostgresConfig {
 }
 
 impl ToPool for PostgresConfig {
-    type Error = crate::error::PostgresError;
-    fn to_pool(self) -> Result<Pool, Self::Error> {
+    fn to_pool(self) -> Result<Pool, PoolBuilderError> {
         let inner = deadpool_postgres::Pool::builder(self.inner).build()?;
         Ok(Pool::Postgres(PostgresPool::new(inner)))
     }

@@ -1,7 +1,8 @@
-use crate::connection::Connection;
 use crate::connection::sqlite::SqliteConnection;
+use crate::connection::common::Connection;
 use crate::pool::common::ToConnection;
 use async_trait::async_trait;
+use crate::error::pool::CommonPoolError;
 
 pub struct SqlitePool {
     inner: deadpool_sqlite::Pool,
@@ -20,4 +21,9 @@ impl From<deadpool_sqlite::Pool> for SqlitePool {
 }
 
 #[async_trait]
-impl ToConnection for SqlitePool {}
+impl ToConnection for SqlitePool {
+    async fn get_connection(&self) -> Result<Connection, CommonPoolError> {
+        let conn = self.inner.get().await?;
+        Ok(Connection::Sqlite(SqliteConnection::new(conn)))
+    }
+}

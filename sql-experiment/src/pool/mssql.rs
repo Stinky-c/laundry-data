@@ -1,4 +1,6 @@
-use crate::connection::Connection;
+use crate::connection::mssql::MsSqlConnection;
+use crate::connection::common::Connection;
+use crate::error::pool::CommonPoolError;
 use crate::pool::common::ToConnection;
 use async_trait::async_trait;
 
@@ -18,4 +20,9 @@ impl From<deadpool_tiberius::Pool> for MsSqlPool {
 }
 
 #[async_trait]
-impl ToConnection for MsSqlPool {}
+impl ToConnection for MsSqlPool {
+    async fn get_connection(&self) -> Result<Connection, CommonPoolError> {
+        let conn = self.inner.get().await?;
+        Ok(Connection::MsSql(MsSqlConnection::new(conn)))
+    }
+}

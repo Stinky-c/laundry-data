@@ -1,19 +1,6 @@
 #![allow(unused_imports)]
-#[cfg(feature = "mssql")]
-mod mssql;
-#[cfg(feature = "postgres")]
-mod postgres;
-#[cfg(feature = "sqlite")]
-mod sqlite;
+pub mod pool;
+pub mod common;
+pub mod query;
 
-#[cfg(feature = "mssql")]
-pub use mssql::*;
-#[cfg(feature = "postgres")]
-pub use postgres::*;
-#[cfg(feature = "sqlite")]
-pub use sqlite::*;
 
-#[derive(thiserror::Error, Debug)]
-pub enum CommonError {
-
-}
