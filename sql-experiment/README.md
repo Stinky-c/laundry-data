@@ -2,10 +2,17 @@
 
 This crate is an experiment that supports a multitude of backends.
 
+## Notes
+Most core logic is enum dispatching to traits. The forward facing variants hold ownership over deadpool objects.
+
+All pool logic is handled by [deadpool](https://crates.io/crates/deadpool).
+While enum dispatching (stuff under the hood), uses [ambassador](https://docs.rs/ambassador/latest/ambassador/)
+
+
 ## Backends - Drivers
-- Sqlite - [async-sqlite](https://crates.io/crates/async-sqlite)
-- Postgres - [tokio-postgres](https://crates.io/crates/tokio-postgres)
-- Sql Server - [tiberius](https://crates.io/crates/tiberius)
+- [Sqlite](https://crates.io/crates/deadpool-sqlite/0.12.1)
+- [Postgres](https://crates.io/crates/deadpool-postgres)
+- [Sql Server](https://crates.io/crates/deadpool-tiberius)
 
 
 ## Reason

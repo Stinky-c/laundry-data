@@ -1,4 +1,6 @@
+use crate::connection::Connection;
 use crate::pool::common::ToConnection;
+use async_trait::async_trait;
 
 pub struct MsSqlPool {
     inner: deadpool_tiberius::Pool,
@@ -15,4 +17,5 @@ impl From<deadpool_tiberius::Pool> for MsSqlPool {
     }
 }
 
+#[async_trait]
 impl ToConnection for MsSqlPool {}

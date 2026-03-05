@@ -1,5 +1,4 @@
 use sql_experiment::mssql_prelude::*;
-use sql_experiment::pool::common::Connection;
 
 #[tokio::test]
 async fn test() -> Result<(), MsSqlError> {

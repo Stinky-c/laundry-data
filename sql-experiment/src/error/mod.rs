@@ -12,3 +12,8 @@ pub use mssql::*;
 pub use postgres::*;
 #[cfg(feature = "sqlite")]
 pub use sqlite::*;
+
+#[derive(thiserror::Error, Debug)]
+pub enum CommonError {
+
+}

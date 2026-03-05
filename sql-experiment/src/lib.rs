@@ -1,6 +1,7 @@
 pub mod config;
 pub mod error;
 pub mod pool;
+pub mod connection;
 mod query;
 #[cfg(test)]
 mod tests;

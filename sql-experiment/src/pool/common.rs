@@ -1,17 +1,17 @@
+use crate::connection::Connection;
+use ambassador::{Delegate, delegatable_trait};
 use async_trait::async_trait;
-use enum_dispatch::enum_dispatch;
-
 /// A blanket implementation defining the ability to get a connection
-#[enum_dispatch(Pool)]
+///
 #[async_trait]
+#[delegatable_trait]
 pub trait ToConnection {
     /// Get a connection object from the pool
-    fn get_connection(&self) -> Connection {
-        todo!()
-    }
+    async fn get_connection(&self) -> Result<Connection, String>;
 }
 
-#[enum_dispatch]
+#[derive(Delegate)]
+#[delegate(ToConnection)]
 pub enum Pool {
     #[cfg(feature = "mssql")]
     MsSql(crate::pool::mssql::MsSqlPool),
@@ -21,11 +21,4 @@ pub enum Pool {
     Sqlite(crate::pool::sqlite::SqlitePool),
 }
 
-pub enum Connection {
-    #[cfg(feature = "mssql")]
-    MsSql,
-    #[cfg(feature = "postgres")]
-    Postgres,
-    #[cfg(feature = "sqlite")]
-    Sqlite,
-}
+impl Pool {}

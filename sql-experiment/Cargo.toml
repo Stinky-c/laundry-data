@@ -7,7 +7,7 @@ edition = "2024"
 async-trait = "0.1.89"
 bon = "3.9.0"
 thiserror = "2"
-enum_dispatch = "0.3.13"
+ambassador = "0.5.0"
 deadpool = { version = "0.12.3", features = ["managed"] }
 
 # tokio stuff for tiberius
