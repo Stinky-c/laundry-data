@@ -29,6 +29,16 @@ pub enum ModeType {
     #[serde(rename = "unknown")]
     Unknown,
 }
+impl ModeType {
+    pub fn variant_string(&self) -> String {
+        match self {
+            ModeType::PressStart => "pressStart".to_string(),
+            ModeType::Running => "running".to_string(),
+            ModeType::Idle => "idle".to_string(),
+            ModeType::Unknown => "unknown".to_string(),
+        }
+    }
+}
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Machine {

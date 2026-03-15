@@ -50,7 +50,28 @@ pub(crate) async fn new_log_entry(conn: &mut MiddlewarePoolConnection, machine: 
             }
         }
     }
-
+    let reason_or_null = if let Some(reason) = machine.not_available_reason {
+        RowValues::Text(reason)
+    } else {
+        RowValues::Null
+    };
+    let query = insert_log_entry(
+        conn,
+        vec![
+            RowValues::Text(pep_str),
+            RowValues::Int(machine.time_remaining.unwrap_or(0) as i64),
+            reason_or_null,
+            RowValues::Int(machine.door_closed as i64),
+            RowValues::Text(machine.mode.variant_string()),
+            RowValues::Text("{}".to_string()), // TODO: Machine settings
+        ],
+    );
+    let _res = conn
+        .query(&query.query)
+        .params(&query.params)
+        .dml()
+        .await
+        .unwrap();
     ()
 }
 
@@ -225,6 +246,18 @@ fn insert_machine(conn: &mut MiddlewarePoolConnection, params: Vec<RowValues>) -
             r#"
             INSERT INTO Machines(machine_id, qr_code_id, nfc_id, controller_type, [type], license_plate)
             VALUES (@P1, @P2, @P3, @P4, @P5, @P6)"#
+        }
+    };
+    QueryAndParams::new(query, params)
+}
+
+fn insert_log_entry(conn: &mut MiddlewarePoolConnection, params: Vec<RowValues>) -> QueryAndParams {
+    let query = match conn {
+        // TODO: Replace GETDATE() with better timestamping
+        MiddlewarePoolConnection::Mssql { .. } => {
+            r#"
+            INSERT INTO LaundryLog(pep_id,timestamp,time_remaining,not_available_reason,door_closed,state,machine_settings)
+            VALUES (@P1, GETDATE(), @P2, @P3, @P4, @P5, @P6)"#
         }
     };
     QueryAndParams::new(query, params)
