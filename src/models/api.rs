@@ -1,3 +1,4 @@
+#[allow(unused)]
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -7,6 +8,14 @@ pub enum MachineType {
     Washer,
     #[serde(rename = "dryer")]
     Dryer,
+}
+impl MachineType {
+    pub fn variant_string(&self) -> String {
+        match self {
+            MachineType::Washer => "washer".to_string(),
+            MachineType::Dryer => "dryer".to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -19,6 +28,16 @@ pub enum ModeType {
     Idle,
     #[serde(rename = "unknown")]
     Unknown,
+}
+impl ModeType {
+    pub fn variant_string(&self) -> String {
+        match self {
+            ModeType::PressStart => "pressStart".to_string(),
+            ModeType::Running => "running".to_string(),
+            ModeType::Idle => "idle".to_string(),
+            ModeType::Unknown => "unknown".to_string(),
+        }
+    }
 }
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
