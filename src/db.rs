@@ -3,38 +3,26 @@ use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
 refinery::embed_migrations!("migrations");
 
-/// Type of Database. One of `postgres`, `pgsql`, `sqlite`, `mssql`.
-static ENV_DB_TYPE: &str = "DB_TYPE";
-/// Hostname or ip to connect to.
-static ENV_DB_HOST: &str = "DB_HOST";
-/// Port to connect to.
-static ENV_DB_PORT: &str = "DB_PORT";
-/// Database to connect to.
-static ENV_DB_NAME: &str = "DB_NAME";
-/// Database Username.
-static ENV_DB_USER: &str = "DB_USER";
-/// Database password.
-static ENV_DB_PASS: &str = "DB_PASS";
-/// Database file path. Used for sqlite.
-static ENV_DB_PATH: &str = "DB_PATH";
-
 #[derive(Clone, Deserialize, Eq, PartialEq)]
 pub(crate) struct DbConfig {
+    /// Hostname or ip to connect to.
+    /// Env: `DB_HOST`
     pub(crate) host: String,
+    /// Port to connect to.
+    /// Env: `DB_PORT`
     pub(crate) port: u16,
+    /// Database to connect to.
+    /// Env: `DB_NAME`
     #[serde(alias = "name")]
     pub(crate) db_name: String,
+    /// Database Username.
+    /// Env: `DB_USER`
     #[serde(alias = "user")]
     pub(crate) user_name: String,
+    /// Database password.
+    /// Env: `DB_PASS`
     #[serde(alias = "pass")]
     pub(crate) password: String,
-
-}
-
-impl DbConfig {
-    fn default_tz() -> String {
-        "UTC".into()
-    }
 }
 
 // Hide password from debug

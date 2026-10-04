@@ -71,11 +71,14 @@ async fn async_main(config: AppConfig) -> Result<()> {
         .password(config.db.password)
         .connect(NoTls)
         .await?;
-    // TODO: Check for database connectivity
 
+    let db_cancel_token = cancel_token.clone();
     tracker.spawn(async move {
-        if let Err(e) = connection.await {
-            error!("connection error: {}", e); // TODO: better handling
+        tokio::select! {
+            _ = db_cancel_token.cancelled() => {debug!("Canceling");}
+            err = connection => {
+                panic!("Database connection had an error. {err:#?}"); // Cant really do anything at this point
+            }
         }
     });
 
@@ -132,3 +135,5 @@ async fn async_main(config: AppConfig) -> Result<()> {
         }
     }
 }
+
+// TODO: find how to stop on a panic

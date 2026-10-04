@@ -14,8 +14,8 @@ pub(crate) type TrackerWithToken = (
     tokio_util::sync::CancellationToken,
 );
 
-use tokio::sync::{mpsc, oneshot};
 use crate::models::api::ApiLocation;
+use tokio::sync::{mpsc, oneshot};
 
 pub(crate) type Http2DbSender = mpsc::Sender<Http2DbMessage>;
 pub(crate) type Http2DbReceiver = mpsc::Receiver<Http2DbMessage>;

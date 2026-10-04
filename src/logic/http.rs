@@ -46,7 +46,9 @@ pub(crate) async fn http_controller(
                     .await
                     .unwrap(); // TODO
 
-                return_channel.send(body).unwrap();
+                return_channel
+                    .send(body)
+                    .expect("Failed to send response. Channel could have closed.")
             }
         };
     }
@@ -121,6 +123,7 @@ async fn scrape_task(
 
 #[instrument(skip_all)]
 async fn get_locations_rooms_endpoint(url: String, client: Client) -> Result<ApiLocation> {
+    // TODO
     let res = client.get(url).send().await?.json::<ApiLocation>().await?;
     Ok(res)
 }
