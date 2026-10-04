@@ -13,12 +13,12 @@ refinery = { version = "0.9.0", features = ["enums", "tokio-postgres"] }
 
 color-eyre = "0.6"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "local-time"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "local-time", "tracing-log"] }
 
 reqwest = { version = "0.13.2", default-features = false, features = ["default", "json", "query", "gzip"] }
 serde = { version = "1.0.228", features = ["derive", "alloc", "rc"] }
 serde_json = { version = "1" }
-moka = { version = "0.12", features = ["future"] }
+moka = { version = "0.12", features = ["future", "logging"] }
 
 rand = "0.10.0"
 tokio-util = { version = "0.7.18", features = ["rt"] }

@@ -2,6 +2,7 @@ use crate::logic::laundrylog;
 use crate::models;
 use crate::models::api::{ApiLocation, DbLocation, DbRoom};
 use crate::models::config::ApiConfig;
+use crate::models::db::{LOCATION_INSERT, LOCATION_QUERY, ROOM_INSERT, ROOMS_QUERY};
 use crate::types::{Db2HttpMessage, Db2HttpSender, Http2DbMessage, Http2DbReceiver};
 use crate::utils::cache::CacheSet;
 use crate::utils::db::row_to_hashset;
@@ -24,16 +25,13 @@ pub(crate) async fn db_controller(
 ) -> () {
     info!("Initializing DB Control task");
 
-    db_precheck(api_config, &conn, db_control_tx.clone())
+    let cache_set = CacheSet::new();
+
+    db_precheck(api_config, cache_set.clone(), &conn, db_control_tx.clone())
         .await
         .unwrap();
 
     // TODO: eviction listening? Prefill cache?
-    let cache_set = CacheSet {
-        rooms: Cache::<String, ()>::new(128),
-        machine: Cache::<Uuid, ()>::new(128),
-        pep: Cache::<String, ()>::new(128),
-    };
 
     loop {
         let msg = tokio::select! {
@@ -71,7 +69,12 @@ async fn db_insert(conn: &Client, cache_Set: CacheSet, response: Response) -> ()
 }
 
 #[instrument(skip_all)]
-async fn db_precheck(endpoints: ApiConfig, conn: &Client, control_tx: Db2HttpSender) -> Result<()> {
+async fn db_precheck(
+    endpoints: ApiConfig,
+    cache_set: CacheSet,
+    conn: &Client,
+    control_tx: Db2HttpSender,
+) -> Result<()> {
     // locations and rooms found in config
     let (config_locations_set, config_rooms_set): (HashSet<String>, HashSet<String>) = {
         let mut locs = HashSet::new();
@@ -86,10 +89,12 @@ async fn db_precheck(endpoints: ApiConfig, conn: &Client, control_tx: Db2HttpSen
 
     // locations and rooms found in database. Explict type cast to text so hashset can parse it
     let location_query = conn
-        .query("SELECT location_id::TEXT FROM Locations", &[])
+        .query(&cache_set.with_statement(&conn, LOCATION_QUERY).await, &[])
         .await?;
     let db_locations_set = row_to_hashset(location_query);
-    let rooms_query = conn.query("SELECT room_id::TEXT FROM Rooms", &[]).await?;
+    let rooms_query = conn
+        .query(&cache_set.with_statement(&conn, ROOMS_QUERY).await, &[])
+        .await?;
     let db_rooms_set = row_to_hashset(rooms_query);
 
     // locations and rooms not present in the database, but found in config
@@ -159,12 +164,12 @@ async fn db_precheck(endpoints: ApiConfig, conn: &Client, control_tx: Db2HttpSen
     info!("FOUND ROOMS: {:?}", found_rooms);
 
     for loc in found_locations {
-        let insert = conn.query("INSERT INTO Locations(location_id, description, label, timezone) VALUES ($1, $2, $3, $4)", &[
-            &loc.location_id,
-            &"",
-            &loc.label,
-            &endpoints.tz
-        ]).await;
+        let insert = conn
+            .query(
+                &cache_set.with_statement(&conn, LOCATION_INSERT).await,
+                &[&loc.location_id, &"", &loc.label, &endpoints.tz],
+            )
+            .await;
         if let Err(e) = insert {
             error!("failed to insert location: {:?}", e)
         }
@@ -173,7 +178,7 @@ async fn db_precheck(endpoints: ApiConfig, conn: &Client, control_tx: Db2HttpSen
     for room in found_rooms {
         let query = conn
             .query(
-                "INSERT INTO rooms(room_id, description, label) VALUES ($1,$2, $3)",
+                &cache_set.with_statement(&conn, ROOM_INSERT).await,
                 &[&room.room_id, &room.description, &room.label],
             )
             .await;

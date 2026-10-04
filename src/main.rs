@@ -5,16 +5,13 @@ mod pep;
 mod types;
 mod utils;
 
+use crate::models::config::AppConfig;
+use crate::utils::prelude::*;
 use config::Config;
-use std::process::exit;
-use std::str::FromStr;
 use tokio::signal::ctrl_c;
 use tokio_postgres::NoTls;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
-
-use crate::models::config::AppConfig;
-use crate::utils::prelude::*;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, fmt};

@@ -48,6 +48,8 @@ pub(crate) mod db {
 
 pub(crate) mod cache {
     use moka::future::Cache;
+    use tokio_postgres::{Client, Statement};
+    use tracing::debug;
     use uuid::Uuid;
 
     #[derive(Debug, Clone)]
@@ -55,5 +57,26 @@ pub(crate) mod cache {
         pub rooms: Cache<String, ()>,
         pub machine: Cache<Uuid, ()>,
         pub pep: Cache<String, ()>,
+        pub statement: Cache<String, Statement>,
+    }
+
+    impl CacheSet {
+        pub fn new() -> Self {
+            Self {
+                rooms: Cache::<String, ()>::new(128),
+                machine: Cache::<Uuid, ()>::new(128),
+                pep: Cache::<String, ()>::new(128),
+                statement: Cache::new(10),
+            }
+        }
+        /// Helper to reuse statements from
+        pub async fn with_statement(&self, conn: &Client, query: &str) -> Statement {
+            self.statement
+                .get_with_by_ref(query, async move {
+                    debug!("Statement cache miss.");
+                    conn.prepare(query).await.unwrap()
+                })
+                .await
+        }
     }
 }
