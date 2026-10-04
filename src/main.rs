@@ -1,12 +1,15 @@
 mod db;
 mod logic;
 mod models;
+mod pep;
 mod types;
 mod utils;
-mod pep;
 
 use config::Config;
+use std::process::exit;
+use std::str::FromStr;
 use tokio::signal::ctrl_c;
+use tokio_postgres::NoTls;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
@@ -14,12 +17,12 @@ use crate::models::config::AppConfig;
 use crate::utils::prelude::*;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::registry()
-        .with(fmt::layer())
+        .with(fmt::layer().with_line_number(true))
         .with(EnvFilter::from_default_env())
         .init();
 
@@ -42,20 +45,51 @@ fn main() -> Result<()> {
 #[instrument(skip_all)]
 async fn async_main(config: AppConfig) -> Result<()> {
     info!("Beginning startup");
-    let pool = db::new_pool(config.db.clone()).await?;
+    debug!("Config: {:?}", &config);
+
+    // Cancel token for all sub-tasks
+    let cancel_token = CancellationToken::new();
+    let tracker: TaskTracker = TaskTracker::new();
+    let tracker_with_token = (tracker.clone(), cancel_token.clone());
+
+    {
+        // Cancel all other tasks when panicking
+        let hook_tracker = tracker.clone();
+        let hook_cancel_token = cancel_token.clone();
+        let previous_hook = std::panic::take_hook();
+
+        std::panic::set_hook(Box::new(move |panic_info| {
+            hook_tracker.close();
+            hook_cancel_token.cancel();
+
+            previous_hook(panic_info);
+        }))
+    }
+
+    let (mut client, connection) = tokio_postgres::config::Config::new()
+        .host(config.db.host)
+        .port(config.db.port)
+        .dbname(config.db.db_name)
+        .user(config.db.user_name)
+        .password(config.db.password)
+        .connect(NoTls)
+        .await?;
     // TODO: Check for database connectivity
 
+    tracker.spawn(async move {
+        if let Err(e) = connection.await {
+            error!("connection error: {}", e); // TODO: better handling
+        }
+    });
+
+    client.check_connection().await?;
+
     info!("Applying migrations");
-    let report = db::embedded::run_async(config.db.clone()).await?;
+    let report = db::migrations::runner().run_async(&mut client).await?;
     info!(
         "Migrations complete: Applied {} migrations",
         report.applied_migrations().len()
     );
-
-    // Cancel token for all sub-tasks
-    let cancel_token = CancellationToken::new();
-    let tracker:TaskTracker = TaskTracker::new();
-    let tracker_with_token = (tracker.clone(), cancel_token.clone());
 
     // Spawn tasks
 
@@ -82,7 +116,7 @@ async fn async_main(config: AppConfig) -> Result<()> {
 
     tracker.spawn(logic::db::db_controller(
         config.api.clone(),
-        pool,
+        client,
         http_rx,
         db_tx,
         cancel_token.clone(),

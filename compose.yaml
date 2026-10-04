@@ -1,12 +1,11 @@
 services:
   db:
     image: timescale/timescaledb-ha:pg18
+    user: 1000:1000
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: ${DB_PASS}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_PASSWORD: password
       PGDATA: /pgdata
     volumes:
       - ./pgsqldata:/pgdata
@@ -15,3 +14,5 @@ services:
     image: adminer
     ports:
       - "8080:8080"
+
+

@@ -1,8 +1,10 @@
+use postgres_types::{FromSql, ToSql};
 #[allow(unused)]
 use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, ToSql, FromSql)]
+#[postgres(name = "machine_type", rename_all = "lowercase")]
 pub enum MachineType {
     #[serde(rename = "washer")]
     Washer,
@@ -18,7 +20,8 @@ impl MachineType {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, ToSql, FromSql)]
+#[postgres(name = "machine_state", rename_all = "camelCase")]
 pub enum ModeType {
     #[serde(rename = "pressStart")]
     PressStart,
@@ -48,14 +51,14 @@ pub struct Machine {
     pub nfc_id: Uuid,
     pub qr_code_id: String,
     pub license_plate: String,
-    pub sticker_number: i16,
+    pub sticker_number: i32,
     #[serde(rename = "type")]
     pub r#type: MachineType,
     pub door_closed: bool,
     pub available: bool,
     pub not_available_reason: Option<String>,
     pub mode: ModeType,
-    pub time_remaining: Option<i16>,
+    pub time_remaining: i16,
 
     #[serde(flatten)]
     pub settings: MachineSettings,
@@ -93,7 +96,7 @@ pub struct ApiRoom {
 /// Struct for inserting into the database
 #[derive(Deserialize, Debug, Eq, Hash, PartialEq)]
 pub struct DbLocation {
-    pub location_id: String,
+    pub location_id: Uuid,
     pub description: String,
     pub label: String,
 }
@@ -105,3 +108,11 @@ pub struct DbRoom {
     pub description: String,
     pub label: String,
 }
+
+/*
+SELECT * FROM laundrylog
+JOIN physicalendpoint ON laundrylog.pep_id = laundrylog.pep_id
+JOIN machines ON physicalendpoint.machine_id = machines.machine_id
+JOIN rooms ON physicalendpoint.room_id = rooms.room_id
+WHERE rooms.room_id = "6321295-004";
+ */

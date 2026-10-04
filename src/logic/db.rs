@@ -3,33 +3,37 @@ use crate::models;
 use crate::models::api::{ApiLocation, DbLocation, DbRoom};
 use crate::models::config::ApiConfig;
 use crate::types::{Db2HttpMessage, Db2HttpSender, Http2DbMessage, Http2DbReceiver};
+use crate::utils::cache::CacheSet;
+use crate::utils::db::row_to_hashset;
 use crate::utils::prelude::*;
-use color_eyre::eyre::OptionExt;
+use moka::future::Cache;
 use reqwest::Response;
-use sql_middleware::{
-    ConfigAndPool, MiddlewarePoolConnection, QueryAndParams, RowValues, TranslationMode,
-};
 use std::collections::HashSet;
 use tokio::sync::oneshot;
+use tokio_postgres::Client;
+use uuid::Uuid;
 
 /// Controller for DB related tasks
 #[instrument(skip_all, fields(task_id=%id()))]
 pub(crate) async fn db_controller(
     api_config: ApiConfig,
-    pool: ConfigAndPool,
+    conn: Client,
     mut http_control_rx: Http2DbReceiver,
     db_control_tx: Db2HttpSender,
     cancel_token: CancellationToken,
 ) -> () {
     info!("Initializing DB Control task");
 
-    db_precheck(
-        api_config,
-        pool.get_connection().await.unwrap(),
-        db_control_tx.clone(),
-    )
-    .await
-    .unwrap();
+    db_precheck(api_config, &conn, db_control_tx.clone())
+        .await
+        .unwrap();
+
+    // TODO: eviction listening? Prefill cache?
+    let cache_set = CacheSet {
+        rooms: Cache::<String, ()>::new(128),
+        machine: Cache::<Uuid, ()>::new(128),
+        pep: Cache::<String, ()>::new(128),
+    };
 
     loop {
         let msg = tokio::select! {
@@ -45,10 +49,9 @@ pub(crate) async fn db_controller(
             },
         };
 
-        let mut insert_conn = pool.get_connection().await.unwrap();
         match msg {
             Http2DbMessage::ApiResponse(res) => {
-                db_insert(&mut insert_conn, res).await;
+                db_insert(&conn, cache_set.clone(), res).await;
             }
             Http2DbMessage::ApiError(_err) => unimplemented!(),
         };
@@ -58,21 +61,17 @@ pub(crate) async fn db_controller(
 }
 
 #[instrument(skip_all)]
-async fn db_insert(conn: &mut MiddlewarePoolConnection, response: Response) -> () {
-    let body = response.json::<Vec<models::api::Machine>>().await.unwrap();
+async fn db_insert(conn: &Client, cache_Set: CacheSet, response: Response) -> () {
+    let body = response.json::<Vec<models::api::Machine>>().await.unwrap(); //FIXME: Actual parsing handler
     info!("Got new batch");
     for machine in body {
-        laundrylog::new_log_entry(conn, machine).await;
+        laundrylog::new_log_entry(conn, cache_Set.clone(), machine).await;
     }
     info!("Batch complete")
 }
 
 #[instrument(skip_all)]
-async fn db_precheck(
-    endpoints: ApiConfig,
-    mut conn: MiddlewarePoolConnection,
-    control_tx: Db2HttpSender,
-) -> Result<()> {
+async fn db_precheck(endpoints: ApiConfig, conn: &Client, control_tx: Db2HttpSender) -> Result<()> {
     // locations and rooms found in config
     let (config_locations_set, config_rooms_set): (HashSet<String>, HashSet<String>) = {
         let mut locs = HashSet::new();
@@ -85,11 +84,13 @@ async fn db_precheck(
         (locs, rooms)
     };
 
-    // locations and rooms found in database
-    let location_query = select_locations(&conn).query;
-    let db_locations_set = get_query_as_hashset(&mut conn, &location_query).await?;
-    let rooms_query = select_rooms(&conn).query;
-    let db_rooms_set = get_query_as_hashset(&mut conn, &rooms_query).await?;
+    // locations and rooms found in database. Explict type cast to text so hashset can parse it
+    let location_query = conn
+        .query("SELECT location_id::TEXT FROM Locations", &[])
+        .await?;
+    let db_locations_set = row_to_hashset(location_query);
+    let rooms_query = conn.query("SELECT room_id::TEXT FROM Rooms", &[]).await?;
+    let db_rooms_set = row_to_hashset(rooms_query);
 
     // locations and rooms not present in the database, but found in config
     let missing_locations: HashSet<_> = config_locations_set
@@ -135,7 +136,7 @@ async fn db_precheck(
         // If the location was missing from db, add to the set to insert into db
         if missing_locations.contains(&recv.location_id.to_string()) {
             found_locations.insert(DbLocation {
-                location_id: recv.location_id.to_string(),
+                location_id: recv.location_id,
                 description: recv.description, // TODO
                 label: recv.label,
             });
@@ -158,98 +159,28 @@ async fn db_precheck(
     info!("FOUND ROOMS: {:?}", found_rooms);
 
     for loc in found_locations {
-        let query = insert_location_query(
-            &conn,
-            vec![
-                RowValues::Text(loc.location_id), // location_id
-                RowValues::Null,                  // TODO: Description
-                RowValues::Text(loc.label),       // label
-            ],
-        );
-        let succ = conn
-            .query(&query.query)
-            .params(&query.params)
-            .translation(TranslationMode::ForceOn)
-            .dml()
-            .await;
-        if let Err(e) = succ {
+        let insert = conn.query("INSERT INTO Locations(location_id, description, label, timezone) VALUES ($1, $2, $3, $4)", &[
+            &loc.location_id,
+            &"",
+            &loc.label,
+            &endpoints.tz
+        ]).await;
+        if let Err(e) = insert {
             error!("failed to insert location: {:?}", e)
         }
     }
 
     for room in found_rooms {
-        let query = insert_room_query(
-            &conn,
-            vec![
-                RowValues::Text(room.room_id),     // room_id
-                RowValues::Text(room.description), // TODO: Description
-                RowValues::Text(room.label),       // label
-            ],
-        );
-        let succ = conn.query(&query.query).params(&query.params).dml().await;
-        if let Err(e) = succ {
-            error!("failed to insert location: {:?}", e)
+        let query = conn
+            .query(
+                "INSERT INTO rooms(room_id, description, label) VALUES ($1,$2, $3)",
+                &[&room.room_id, &room.description, &room.label],
+            )
+            .await;
+        if let Err(e) = query {
+            error!("failed to insert room: {:?}", e)
         }
     }
 
     Ok(())
-}
-
-async fn get_query_as_hashset(
-    conn: &mut MiddlewarePoolConnection,
-    query: &str,
-) -> Result<HashSet<String>> {
-    let result = conn.query(query).select().await?;
-    let mut set: HashSet<String> = HashSet::new();
-
-    for row in result.results.iter() {
-        let value = row
-            .get_by_index(0)
-            .ok_or_eyre("Failed to get row by index 0")?;
-        match value {
-            RowValues::Text(val) => {
-                set.insert(val.to_string());
-            }
-            v => panic!("got wrong type from query, {:?}", v),
-        }
-    }
-    Ok(set)
-}
-
-fn select_rooms(conn: &MiddlewarePoolConnection) -> QueryAndParams {
-    let query = match conn {
-        _ => "SELECT room_id FROM rooms",
-    };
-    QueryAndParams::new_without_params(query)
-}
-fn select_locations(conn: &MiddlewarePoolConnection) -> QueryAndParams {
-    let query = match conn {
-        //FIXME: sql-middleware does not see unique identifier as a string
-        MiddlewarePoolConnection::Mssql { .. } => {
-            "SELECT lower(CAST(location_id AS VARCHAR(255))) AS location_id FROM Locations"
-        }
-        _ => "SELECT location_id FROM Locations",
-    };
-    QueryAndParams::new_without_params(query)
-}
-
-fn insert_room_query(conn: &MiddlewarePoolConnection, params: Vec<RowValues>) -> QueryAndParams {
-    let query = match conn {
-        MiddlewarePoolConnection::Mssql { .. } => {
-            "INSERT INTO rooms(room_id, description, label) VALUES (@P1,@P2, @P3)"
-        }
-    };
-    QueryAndParams::new(query, params)
-}
-
-fn insert_location_query(
-    conn: &MiddlewarePoolConnection,
-    params: Vec<RowValues>,
-) -> QueryAndParams {
-    let query = match conn {
-        MiddlewarePoolConnection::Mssql { .. } => {
-            "INSERT INTO locations(location_id, description, label, timezone) VALUES (@P1, @P2, @P3, 'UTC')"
-        }
-    };
-    QueryAndParams::new(query, params)
 }

@@ -1,7 +1,6 @@
 # Considerations
 
 - Use stream API for real time updates
-- Support MsSQl for final grade
 - Single timestamp for entire insert into [`ApiLog`](./Schema.md#apilog) and [`LaundryLog`](./Schema.md#laundrylog)
 - [`machines`](./Schema.md#machines) may have a collision. If a machine is replaced in a room, both the `room_id` and `sticker_number` will be the same.
   - Solve using `last_seen` timestamp and add constraint to block collisions.

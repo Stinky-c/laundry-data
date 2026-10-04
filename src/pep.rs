@@ -7,14 +7,14 @@ use xxhash_rust::xxh3::xxh3_128;
 pub(crate) struct PhysicalEndpointId {
     // Order follows, xxhash3 128 bit, base64 encoded
     // sticker[le], machine[uuid], room[string], location[uuid]
-    sticker_number: u32,
+    sticker_number: i32,
     machine_id: Uuid,
     room_id: String,
     location_id: Uuid,
 }
 
 impl PhysicalEndpointId {
-    pub fn new(sticker_number: u32, machine_id: Uuid, room_id: String, location_id: Uuid) -> Self {
+    pub fn new(sticker_number: i32, machine_id: Uuid, room_id: String, location_id: Uuid) -> Self {
         Self {
             sticker_number,
             machine_id,
@@ -24,7 +24,7 @@ impl PhysicalEndpointId {
     }
     pub fn from_machine(machine: &Machine) -> Self {
         Self {
-            sticker_number: machine.sticker_number as u32,
+            sticker_number: machine.sticker_number,
             machine_id: machine.opaque_id,
             room_id: machine.room_id.clone(),
             location_id: machine.location_id,
@@ -46,7 +46,7 @@ impl PhysicalEndpointId {
 
         Ok(URL_SAFE_NO_PAD.encode(hash.to_le_bytes()))
     }
-    pub(crate) fn sticker_number(&self) -> u32 {
+    pub(crate) fn sticker_number(&self) -> i32 {
         self.sticker_number
     }
     pub(crate) fn machine_id(&self) -> &Uuid {

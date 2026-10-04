@@ -1,6 +1,6 @@
 [tools]
 
-rust = { version = "1.93.0", profile = "default", components = "rust-src" }
+rust = { version = "latest", profile = "default", components = "rust-src" }
 "github:rust-lang/mdbook" = "0.5.2"
 "cargo:mdbook-gitinfo" = "2.0.0"
 # Fork of mdbook-cmdrun with mdbook 0.5 support
@@ -12,6 +12,15 @@ CSC_PROTO = "https"
 CSC_HOST = "mycscgo.com"
 CSC_PORT = ""
 CSC_UA = ""
+
+# Databas
+DB_TYPE = "postgres"
+DB_HOST = "localhost"
+DB_PORT = "5432"
+# Dev creds only
+DB_NAME = "postgres"
+DB_USER = "postgres"
+DB_PASS = "password"
 
 
 [tasks.docs]
@@ -62,47 +71,45 @@ run = "cargo clean"
 [settings]
 experimental = true
 
-[task_templates]
-[task_templates."app:run"]
-description = "Run app with only {{vars.feature}} enabled"
-run = 'cargo run --no-default-features --features {{vars.feature}}'
+[tasks."app:run"]
+run = 'cargo run '
 env = { RUST_LOG = "debug,laundry_data=debug,h2=error" }
 
-[task_templates."app:build"]
-description = "Build app in release mode with only {{vars.feature}} enabled"
-run = 'cargo build --no-default-features --features {{vars.feature}} --release'
+[tasks."app:build"]
+run = 'cargo build --release'
 
-[task_templates."app:check"]
-description = "Check with clippy with only {{vars.feature}} enabled"
-run = 'cargo clippy --no-default-features --features {{vars.feature}}'
+[tasks."app:check"]
+run = 'cargo clippy '
 
-[task_templates."app:deps"]
+[tasks."app:deps"]
 description = "Build a dependency tree using cargo"
-run = 'cargo tree --no-default-features --features {{vars.feature}}'
+run = 'cargo tree '
 
 
-[task_templates."db:clean"]
+[tasks."db:clean"]
 description = "Clean left over database files"
+run = "rm -rf pgsqldata"
 
-[task_templates."db:pre"]
+[tasks."db:pre"]
 description = "Ran before db:up"
-run = "mkdir -p {{vars.data_dir}}"
-run_windows = "mkdir {{vars.data_dir}}"
-outputs = "{{vars.data_dir}}"
+run = "mkdir -p pgsqldata"
+run_windows = "mkdir pgsqldata"
+outputs = "pgsqldata"
 
-[task_templates."db:up"]
+[tasks."db:up"]
 depends = "db:pre"
 description = "Start docker compose"
-run = "docker compose -f compose.{{vars.feature}}.yaml up -d"
+run = "docker compose -f compose.yaml up -d"
 
-[task_templates."db:ps"]
+[tasks."db:ps"]
 description = "Check running docker compose containers"
-run = "docker compose -f compose.{{vars.feature}}.yaml ps"
+run = "docker compose -f compose.yaml ps"
 
-[task_templates."db:logs"]
+[tasks."db:logs"]
 description = "Check docker compose logs"
-run = "docker compose -f compose.{{vars.feature}}.yaml logs --follow"
+run = "docker compose -f compose.yaml logs --follow"
 
-[task_templates."db:down"]
+[tasks."db:down"]
 description = "Stop docker compose"
-run = "docker compose -f compose.{{vars.feature}}.yaml down"
+run = "docker compose -f compose.yaml down"
+

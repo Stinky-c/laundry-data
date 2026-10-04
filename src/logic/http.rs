@@ -133,10 +133,10 @@ pub(crate) fn build_client() -> Result<Client> {
         .build()?)
 }
 
-const MIN_OFFSET: i64 = -9;
-const MAX_OFFSET: i64 = 9;
+const MIN_OFFSET_SECS: i64 = -9;
+const MAX_OFFSET_SECS: i64 = 9;
 fn get_minute_dur_offset() -> Duration {
-    let offset = rand::random_range(MIN_OFFSET..=MAX_OFFSET);
+    let offset = rand::random_range(MIN_OFFSET_SECS..=MAX_OFFSET_SECS);
     let dur = (60 + offset) as u64; // How does this make it safe?
     Duration::from_secs(dur)
 }

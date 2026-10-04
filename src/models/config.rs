@@ -15,6 +15,8 @@ pub(crate) struct ApiConfig {
     pub(crate) host: String,
     #[serde(default = "ApiConfig::default_api_port")]
     pub(crate) port: u16,
+    #[serde(alias = "tz", default = "ApiConfig::default_tz")]
+    pub(crate) tz: String,
 }
 
 impl ApiConfig {
@@ -26,5 +28,8 @@ impl ApiConfig {
     }
     fn default_api_port() -> u16 {
         443
+    }
+    fn default_tz() -> String {
+        "UTC".to_string()
     }
 }

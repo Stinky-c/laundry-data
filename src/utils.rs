@@ -26,3 +26,34 @@ pub(crate) mod url {
         )
     }
 }
+
+pub(crate) mod db {
+    use std::collections::HashSet;
+    use std::hash::Hash;
+    use tokio_postgres::Row;
+    use tokio_postgres::types::{FromSql, FromSqlOwned};
+
+    /// Small helper that gets the first index of ever returned row and combines into a hashset
+    /// Will panic if the type cannot be converted into [T]
+    pub fn row_to_hashset<T: FromSqlOwned + Eq + Hash>(rows: Vec<Row>) -> HashSet<T> {
+        let mut set = HashSet::new();
+
+        rows.into_iter().for_each(|row| {
+            let value: T = row.get(0);
+            set.insert(value);
+        });
+        set
+    }
+}
+
+pub(crate) mod cache {
+    use moka::future::Cache;
+    use uuid::Uuid;
+
+    #[derive(Debug, Clone)]
+    pub struct CacheSet {
+        pub rooms: Cache<String, ()>,
+        pub machine: Cache<Uuid, ()>,
+        pub pep: Cache<String, ()>,
+    }
+}
