@@ -31,7 +31,7 @@ pub(crate) mod db {
     use std::collections::HashSet;
     use std::hash::Hash;
     use tokio_postgres::Row;
-    use tokio_postgres::types::{FromSql, FromSqlOwned};
+    use tokio_postgres::types::FromSqlOwned;
 
     /// Small helper that gets the first index of ever returned row and combines into a hashset
     /// Will panic if the type cannot be converted into [T]
@@ -54,7 +54,6 @@ pub(crate) mod cache {
 
     #[derive(Debug, Clone)]
     pub struct CacheSet {
-        pub rooms: Cache<String, ()>,
         pub machine: Cache<Uuid, ()>,
         pub pep: Cache<String, ()>,
         pub statement: Cache<String, Statement>,
@@ -63,7 +62,6 @@ pub(crate) mod cache {
     impl CacheSet {
         pub fn new() -> Self {
             Self {
-                rooms: Cache::<String, ()>::new(128),
                 machine: Cache::<Uuid, ()>::new(128),
                 pep: Cache::<String, ()>::new(128),
                 statement: Cache::new(10),
@@ -74,7 +72,9 @@ pub(crate) mod cache {
             self.statement
                 .get_with_by_ref(query, async move {
                     debug!("Statement cache miss.");
-                    conn.prepare(query).await.unwrap()
+                    conn.prepare(query)
+                        .await
+                        .expect("Failed to prepare a query. The database is likely down.")
                 })
                 .await
         }

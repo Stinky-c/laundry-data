@@ -19,7 +19,6 @@ use tokio::sync::{mpsc, oneshot};
 
 pub(crate) type Http2DbSender = mpsc::Sender<Http2DbMessage>;
 pub(crate) type Http2DbReceiver = mpsc::Receiver<Http2DbMessage>;
-pub(crate) type Http2DbTxRx = (Http2DbSender, Http2DbReceiver);
 
 // http -> db
 pub(crate) enum Http2DbMessage {
@@ -29,11 +28,11 @@ pub(crate) enum Http2DbMessage {
 
 pub(crate) type Db2HttpSender = mpsc::Sender<Db2HttpMessage>;
 pub(crate) type Db2HttpReceiver = mpsc::Receiver<Db2HttpMessage>;
-pub(crate) type Db2HttpTxRx = (Db2HttpSender, Db2HttpReceiver);
 
 // db -> http
 pub(crate) enum Db2HttpMessage {
-    Noop,
+    #[allow(unused)]
+    // Should I ever need more machine information
     MissingMachineIdent {
         room_id: String,
         location_id: String,

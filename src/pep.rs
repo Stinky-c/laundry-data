@@ -1,5 +1,4 @@
 use crate::models::api::Machine;
-use crate::utils::prelude::*;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use uuid::Uuid;
 use xxhash_rust::xxh3::xxh3_128;
@@ -30,7 +29,7 @@ impl PhysicalEndpointId {
             location_id: machine.location_id,
         }
     }
-    pub fn calculate_pep(&self) -> Result<String> {
+    pub fn calculate_pep(&self) -> String {
         let sticker_slice = self.sticker_number.to_le_bytes();
         let machine_slice = self.machine_id.as_bytes();
         let room_slice = self.room_id.as_bytes();
@@ -44,7 +43,7 @@ impl PhysicalEndpointId {
 
         let hash = xxh3_128(slice.as_slice());
 
-        Ok(URL_SAFE_NO_PAD.encode(hash.to_le_bytes()))
+        URL_SAFE_NO_PAD.encode(hash.to_le_bytes())
     }
     pub(crate) fn sticker_number(&self) -> i32 {
         self.sticker_number

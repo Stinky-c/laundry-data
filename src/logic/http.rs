@@ -7,7 +7,6 @@ use crate::types::{
 use crate::utils::prelude::*;
 use crate::utils::url;
 use reqwest::{Client, header};
-use tokio::sync::oneshot;
 use tokio::time::{Duration, sleep};
 
 // Long-lived controller task. Handles control messages from the database
@@ -35,7 +34,6 @@ pub(crate) async fn http_controller(
         };
 
         match msg {
-            Db2HttpMessage::Noop => info!("DB NOOP"),
             Db2HttpMessage::MissingMachineIdent { .. } => unimplemented!(),
             Db2HttpMessage::MissingRoomLocationIdent {
                 location_id,

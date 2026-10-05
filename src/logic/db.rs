@@ -7,12 +7,10 @@ use crate::types::{Db2HttpMessage, Db2HttpSender, Http2DbMessage, Http2DbReceive
 use crate::utils::cache::CacheSet;
 use crate::utils::db::row_to_hashset;
 use crate::utils::prelude::*;
-use moka::future::Cache;
 use reqwest::Response;
 use std::collections::HashSet;
 use tokio::sync::oneshot;
 use tokio_postgres::Client;
-use uuid::Uuid;
 
 /// Controller for DB related tasks
 #[instrument(skip_all, fields(task_id=%id()))]
@@ -32,7 +30,7 @@ pub(crate) async fn db_controller(
         .unwrap();
 
     // TODO: eviction listening? Prefill cache?
-
+    let mut batch: u64 = 0;
     loop {
         let msg = tokio::select! {
             _ = cancel_token.cancelled() => {debug!("Got cancel");break},
@@ -49,23 +47,23 @@ pub(crate) async fn db_controller(
 
         match msg {
             Http2DbMessage::ApiResponse(res) => {
-                db_insert(&conn, cache_set.clone(), res).await;
+                db_insert(&conn, cache_set.clone(), res, batch).await;
             }
             Http2DbMessage::ApiError(_err) => unimplemented!(),
         };
-    }
 
-    // cleanup
+        batch += 1; // Restart the damn app if this panics.
+    }
 }
 
-#[instrument(skip_all)]
-async fn db_insert(conn: &Client, cache_Set: CacheSet, response: Response) -> () {
+#[instrument(skip_all, fields(batch=_batch_num))]
+async fn db_insert(conn: &Client, cache_set: CacheSet, response: Response, _batch_num: u64) -> () {
     let body = response.json::<Vec<models::api::Machine>>().await.unwrap(); //FIXME: Actual parsing handler
-    info!("Got new batch");
+    debug!("Starting new batch");
     for machine in body {
-        laundrylog::new_log_entry(conn, cache_Set.clone(), machine).await;
+        laundrylog::new_log_entry(conn, cache_set.clone(), machine).await;
     }
-    info!("Batch complete")
+    info!("Batch completed")
 }
 
 #[instrument(skip_all)]
@@ -75,6 +73,7 @@ async fn db_precheck(
     conn: &Client,
     control_tx: Db2HttpSender,
 ) -> Result<()> {
+    info!("Starting Precheck");
     // locations and rooms found in config
     let (config_locations_set, config_rooms_set): (HashSet<String>, HashSet<String>) = {
         let mut locs = HashSet::new();
@@ -89,11 +88,11 @@ async fn db_precheck(
 
     // locations and rooms found in database. Explict type cast to text so hashset can parse it
     let location_query = conn
-        .query(&cache_set.with_statement(&conn, LOCATION_QUERY).await, &[])
+        .query(&cache_set.with_statement(conn, LOCATION_QUERY).await, &[])
         .await?;
     let db_locations_set = row_to_hashset(location_query);
     let rooms_query = conn
-        .query(&cache_set.with_statement(&conn, ROOMS_QUERY).await, &[])
+        .query(&cache_set.with_statement(conn, ROOMS_QUERY).await, &[])
         .await?;
     let db_rooms_set = row_to_hashset(rooms_query);
 
@@ -110,13 +109,18 @@ async fn db_precheck(
     info!("MISSING LOCATIONS: {:?}", missing_locations);
     info!("MISSING ROOMS: {:?}", missing_rooms);
 
+    if missing_locations.is_empty() && missing_rooms.is_empty() {
+        info!("Not missing any rooms or locations. Skipping precheck corrections!");
+        return Ok(());
+    }
+
     let mut found_locations: HashSet<DbLocation> = HashSet::new();
     let mut found_rooms: HashSet<DbRoom> = HashSet::new();
 
     // iter over all location ids in the config.
     // the set of missing rooms can only be missing if the location and room is found in the config
     for location in config_locations_set {
-        let (once_tx, mut once_rx) = oneshot::channel::<ApiLocation>();
+        let (once_tx, once_rx) = oneshot::channel::<ApiLocation>();
         // Ask http for the missing location/room data
         let control_res = control_tx
             .send(Db2HttpMessage::MissingRoomLocationIdent {
@@ -166,7 +170,7 @@ async fn db_precheck(
     for loc in found_locations {
         let insert = conn
             .query(
-                &cache_set.with_statement(&conn, LOCATION_INSERT).await,
+                &cache_set.with_statement(conn, LOCATION_INSERT).await,
                 &[&loc.location_id, &"", &loc.label, &endpoints.tz],
             )
             .await;
@@ -178,7 +182,7 @@ async fn db_precheck(
     for room in found_rooms {
         let query = conn
             .query(
-                &cache_set.with_statement(&conn, ROOM_INSERT).await,
+                &cache_set.with_statement(conn, ROOM_INSERT).await,
                 &[&room.room_id, &room.description, &room.label],
             )
             .await;

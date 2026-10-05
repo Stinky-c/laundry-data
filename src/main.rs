@@ -16,14 +16,19 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, fmt};
 
-fn main() -> Result<()> {
+#[tokio::main]
+#[instrument(ret, name = "laundry")]
+async fn main() -> Result<()> {
     color_eyre::install()?;
+
+    // let console_layer = console_subscriber::spawn();
     tracing_subscriber::registry()
+        // .with(console_layer)
         .with(fmt::layer().with_line_number(true))
         .with(EnvFilter::from_default_env())
         .init();
 
-    let app_config = Config::builder()
+    let config: AppConfig = Config::builder()
         .add_source(
             config::Environment::default()
                 .separator("_")
@@ -33,14 +38,6 @@ fn main() -> Result<()> {
         .build()?
         .try_deserialize()?;
 
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()?
-        .block_on(async_main(app_config))
-}
-
-#[instrument(skip_all)]
-async fn async_main(config: AppConfig) -> Result<()> {
     info!("Beginning startup");
     debug!("Config: {:?}", &config);
 
@@ -77,6 +74,7 @@ async fn async_main(config: AppConfig) -> Result<()> {
         tokio::select! {
             _ = db_cancel_token.cancelled() => {debug!("Canceling");}
             err = connection => {
+                db_cancel_token.cancel();
                 panic!("Database connection had an error. {err:#?}"); // Cant really do anything at this point
             }
         }
@@ -105,6 +103,7 @@ async fn async_main(config: AppConfig) -> Result<()> {
         http_client.clone(),
         http_tx,
     )?;
+
     tracker.spawn(logic::http::http_controller(
         db_rx,
         config.api.clone(),

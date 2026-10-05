@@ -5,8 +5,9 @@ edition = "2024"
 publish = false
 
 
+
 [dependencies]
-tokio = { version = "1.49.0", features = ["full"] }
+tokio = { version = "1.49.0", features = ["full", "tracing"] }
 tokio-postgres = { version = "0.7.18", features = ["with-uuid-1", "with-serde_json-1"] }
 postgres-types = { version = "*", features = ["derive", ] }
 refinery = { version = "0.9.0", features = ["enums", "tokio-postgres"] }
@@ -14,6 +15,7 @@ refinery = { version = "0.9.0", features = ["enums", "tokio-postgres"] }
 color-eyre = "0.6"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "local-time", "tracing-log"] }
+#console-subscriber = { version = "*", features = ["parking_lot", "env-filter"] }
 
 reqwest = { version = "0.13.2", default-features = false, features = ["default", "json", "query", "gzip"] }
 serde = { version = "1.0.228", features = ["derive", "alloc", "rc"] }
@@ -33,4 +35,4 @@ base64 = "0.22.1"
 
 [lints.clippy]
 unwrap_used = "deny"
-expect_used = "deny"
+expect_used = "allow" # Just bail if I cant deal with the error. Like a database failure which should close the app earlier.

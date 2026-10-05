@@ -2,13 +2,13 @@
 version = "rev:3947c797d063352e0f983311c078430215cc1cca"
 backend = "cargo:https://github.com/roberth/mdbook-cmdrun"
 
-[[tools."cargo:https://github.com/roberth/mdbook-cmdrun"]]
-version = "ref:3947c797d063352e0f983311c078430215cc1cca"
-backend = "cargo:https://github.com/roberth/mdbook-cmdrun"
-
 [[tools."cargo:mdbook-gitinfo"]]
 version = "2.0.0"
 backend = "cargo:mdbook-gitinfo"
+
+[[tools."cargo:tokio-console"]]
+version = "0.1.14"
+backend = "cargo:tokio-console"
 
 [[tools."github:rust-lang/mdbook"]]
 version = "0.5.2"
