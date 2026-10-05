@@ -16,9 +16,10 @@ use crate::utils::cache::CacheSet;
 use crate::utils::prelude::*;
 use tokio_postgres::Client;
 
+#[instrument(skip_all)]
 pub(crate) async fn new_log_entry(conn: &Client, cache_set: CacheSet, machine: Machine) {
     if cache_set.machine.get(&machine.opaque_id).await.is_none() {
-        debug!("Machine cache miss.");
+        debug!(machine_id=%machine.opaque_id, "Machine cache miss.");
         let query = conn
             .query_opt(
                 &cache_set.with_statement(conn, MACHINE_CHECK).await,
@@ -30,6 +31,7 @@ pub(crate) async fn new_log_entry(conn: &Client, cache_set: CacheSet, machine: M
         match query {
             None => {
                 debug!(
+                    machine_id=%machine.opaque_id,
                     "Machine database miss. Adding new machine {:?}",
                     machine.opaque_id
                 );
@@ -49,7 +51,7 @@ pub(crate) async fn new_log_entry(conn: &Client, cache_set: CacheSet, machine: M
                     .expect("Database query failed");
             }
             Some(_) => {
-                debug!("Database hit. Inserting into cache");
+                debug!(machine_id=%machine.opaque_id, "machine Database hit. Inserting into cache");
                 cache_set.machine.insert(machine.opaque_id, ()).await;
             }
         }
@@ -59,7 +61,7 @@ pub(crate) async fn new_log_entry(conn: &Client, cache_set: CacheSet, machine: M
     let pep_str = pep.calculate_pep();
 
     if cache_set.pep.get(&pep_str).await.is_none() {
-        debug!("Pep cache miss.");
+        debug!(pep_id=%pep_str, "Pep cache miss.");
         let query = conn
             .query_opt(
                 &cache_set.with_statement(conn, PEP_CHECK).await,
@@ -70,7 +72,7 @@ pub(crate) async fn new_log_entry(conn: &Client, cache_set: CacheSet, machine: M
 
         match query {
             None => {
-                info!("Pep database miss. adding new pep '{:?}'", pep_str);
+                info!(pep_id=%pep_str, "Pep database miss. adding new pep '{:?}'", pep_str);
                 let _ = conn
                     .query(
                         &cache_set.with_statement(conn, PEP_INSERT).await,
@@ -87,7 +89,7 @@ pub(crate) async fn new_log_entry(conn: &Client, cache_set: CacheSet, machine: M
                 // cache_set.pep.insert(pep_str.clone(), ()).await;
             }
             Some(_) => {
-                debug!("Database hit. Inserting into cache");
+                debug!(pep_id=%pep_str, "Pep Database hit. Inserting into cache");
                 cache_set.pep.insert(pep_str.clone(), ()).await;
             }
         }

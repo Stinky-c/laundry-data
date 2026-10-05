@@ -12,6 +12,7 @@ use tokio::signal::ctrl_c;
 use tokio_postgres::NoTls;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
+use tracing::{Instrument, trace_span};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, fmt};
@@ -83,7 +84,10 @@ async fn main() -> Result<()> {
     client.check_connection().await?;
 
     info!("Applying migrations");
-    let report = db::migrations::runner().run_async(&mut client).await?;
+    let report = db::migrations::runner()
+        .run_async(&mut client)
+        .instrument(trace_span!("migration"))
+        .await?;
     info!(
         "Migrations complete: Applied {} migrations",
         report.applied_migrations().len()
@@ -136,3 +140,4 @@ async fn main() -> Result<()> {
 }
 
 // TODO: find how to stop on a panic
+// TODO: Log appending if wanted.
